@@ -524,17 +524,15 @@
 </div>
 
 <!-- ════════════ MODAL BORRAR ════════════ -->
-<div id="modal-delete" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:100; align-items:flex-end; justify-content:center;">
+<div id="modal-delete" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:100; align-items:flex-end; justify-content:center;">
   <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px 16px 0 0; padding:20px 20px 32px; width:100%; max-width:480px;">
     <div style="font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px;">Eliminar parada</div>
-    <div id="modal-delete-name" style="font-size:17px; font-weight:800; margin-bottom:4px;"></div>
+    <div id="modal-delete-name" style="font-size:17px; font-weight:800; color:var(--text); margin-bottom:4px;"></div>
     <div id="modal-delete-city" style="font-size:13px; color:var(--text2); margin-bottom:16px;"></div>
 
     <div style="font-size:12px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.6px; margin-bottom:8px;">Motivo de eliminación</div>
     <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;" id="modal-motivos">
-      ${['No cabe en el camión','Cliente canceló','Dirección incorrecta','Ya entregado antes','Fuera de ruta','Otro'].map(m =>
-        `<div class="motivo-chip" onclick="selectMotivo(this)" data-motivo="${m}">${m}</div>`
-      ).join('')}
+      <!-- generado por JS -->
     </div>
     <textarea id="modal-nota" placeholder="Nota adicional (opcional)…" rows="2"
       style="width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px; color:var(--text); font-family:inherit; font-size:13px; resize:none; margin-bottom:14px;"></textarea>
@@ -958,29 +956,46 @@ function renderList() {
   }).join('');
 }
 
-let deleteTargetIdx = null;
-
+const MOTIVOS = [
+  'No se ha cargado/facturado',
+  'No cabe en el camión',
+  'Cliente canceló',
+  'Dirección incorrecta',
+  'Ya entregado antes',
+  'Fuera de ruta',
+  'Otro'
+];
 function openGestionar() {
   const list = document.getElementById('gestionar-list');
   list.innerHTML = stops.map((s, i) => {
     const icon = s.status === 'done' ? '✅' : s.status === 'incident' ? '⚠️' : '📦';
     const uniqueDocs = [...new Set(s.docs.map(d => d.num))];
     return `
-      <div class="stop-card" onclick="openDeleteModal(${i})" style="cursor:pointer;">
-        <div class="stop-top">
-          <div class="stop-num" style="background:var(--surface2); color:var(--text2);">${i+1}</div>
-          <div class="stop-info">
-            <div class="stop-name">${s.company}</div>
-            <div class="stop-city">${s.cp} — ${s.city}</div>
-            <div class="stop-addr">${s.address}</div>
+      <div onclick="openDeleteModal(${i})" style="
+        background:var(--surface); border:1px solid var(--border);
+        border-radius:12px; margin:0 12px 10px; padding:14px;
+        cursor:pointer; active:opacity:.8;">
+        <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:8px;">
+          <div style="
+            width:28px; height:28px; border-radius:8px; flex-shrink:0;
+            background:var(--surface2); border:1px solid var(--border);
+            display:flex; align-items:center; justify-content:center;
+            font-size:12px; font-weight:800; color:var(--text2);">${i+1}</div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-size:14px; font-weight:700; color:var(--text); line-height:1.3;">${s.company}</div>
+            <div style="font-size:12px; color:var(--text2); margin-top:2px;">${s.cp} — ${s.city}</div>
+            <div style="font-size:11px; color:var(--text3); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${s.address}</div>
           </div>
-          <div style="font-size:18px;">${icon}</div>
+          <div style="font-size:18px; flex-shrink:0;">${icon}</div>
         </div>
-        <div class="stop-docs">
-          ${uniqueDocs.slice(0,3).map(d => `<div class="doc-tag">${d}</div>`).join('')}
-          ${uniqueDocs.length > 3 ? `<div class="doc-tag">+${uniqueDocs.length-3}</div>` : ''}
+        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+          ${uniqueDocs.slice(0,3).map(d => `
+            <div style="background:var(--surface2); border-radius:6px; padding:3px 8px;
+              font-size:10px; font-weight:600; color:var(--text2); font-family:monospace;">${d}</div>
+          `).join('')}
+          ${uniqueDocs.length > 3 ? `<div style="background:var(--surface2); border-radius:6px; padding:3px 8px; font-size:10px; font-weight:600; color:var(--text2);">+${uniqueDocs.length-3}</div>` : ''}
         </div>
-        <div class="stop-bultos" style="color:var(--red); font-weight:600;">Toca para eliminar →</div>
+        <div style="font-size:12px; font-weight:700; color:var(--red);">Toca para eliminar →</div>
       </div>
     `;
   }).join('') || '<div style="padding:32px; text-align:center; color:var(--text3);">No hay paradas cargadas</div>';
@@ -993,10 +1008,14 @@ function openDeleteModal(idx) {
   document.getElementById('modal-delete-name').textContent = s.company;
   document.getElementById('modal-delete-city').textContent = `${s.cp} — ${s.city}`;
   document.getElementById('modal-nota').value = '';
-  // Reset chips
-  document.querySelectorAll('.motivo-chip').forEach(c => c.classList.remove('selected'));
-  const modal = document.getElementById('modal-delete');
-  modal.style.display = 'flex';
+
+  // Generate chips dynamically
+  const container = document.getElementById('modal-motivos');
+  container.innerHTML = MOTIVOS.map(m =>
+    `<div class="motivo-chip" onclick="selectMotivo(this)" data-motivo="${m}">${m}</div>`
+  ).join('');
+
+  document.getElementById('modal-delete').style.display = 'flex';
 }
 
 function selectMotivo(chip) {
