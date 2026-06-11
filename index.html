@@ -1172,16 +1172,6 @@ async function processScan() {
   document.getElementById('scan-result-msg').innerHTML = '';
 
   try {
-    // Build message content: one image per page + instruction
-    const imageContent = scanPages.map(b64 => ({
-      type: 'image',
-      source: {
-        type: 'base64',
-        media_type: b64.startsWith('data:image/png') ? 'image/png' : 'image/jpeg',
-        data: b64.split(',')[1]
-      }
-    }));
-
     const prompt = `Eres un asistente que extrae datos de albaranes y hojas de ruta de reparto de electrodomésticos de la empresa MASTER ELEC / MASTER CADENA.
 
 Analiza todas las imágenes y extrae CADA entrega/tienda/cliente que encuentres.
@@ -1201,21 +1191,30 @@ Ejemplo: [{"company":"ELECTRICA ARAUJO S.A.","address":"CALLE IGLESIA 16 BIS","c
 Si hay varias páginas, combina todos los datos en un solo array.
 Si una tienda tiene varios albaranes en páginas distintas, crea una entrada por albarán.`;
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer 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'
+      },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
         max_tokens: 2000,
         messages: [{
           role: 'user',
-          content: [...imageContent, { type: 'text', text: prompt }]
+          content: [
+            ...scanPages.map(b64 => ({
+              type: 'image_url',
+              image_url: { url: b64 }
+            })),
+            { type: 'text', text: prompt }
+          ]
         }]
       })
     });
 
     const data = await response.json();
-    const rawText = data.content.map(c => c.text || '').join('').trim();
+    const rawText = (data.choices?.[0]?.message?.content || '').trim();
 
     // Parse JSON response
     const clean = rawText.replace(/^```json|^```|```$/gm, '').trim();
