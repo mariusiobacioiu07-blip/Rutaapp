@@ -484,7 +484,10 @@
 <!-- ════════════ LIST SCREEN ════════════ -->
 <div class="screen" id="screen-list">
   <div class="list-header">
-    <div class="list-date" id="list-date"></div>
+    <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
+      <button class="topbar-back" onclick="showScreen('screen-menu')" style="font-size:18px; padding:0;">←</button>
+      <div class="list-date" id="list-date" style="margin-bottom:0;"></div>
+    </div>
     <div class="list-title" id="list-title">Entregas del día</div>
     <div class="list-stats" id="list-stats"></div>
   </div>
