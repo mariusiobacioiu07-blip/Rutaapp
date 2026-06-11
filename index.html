@@ -134,7 +134,7 @@
   .stop-info { flex: 1; min-width: 0; }
   .stop-name { font-size: 14px; font-weight: 700; line-height: 1.3; }
   .stop-city { font-size: 11px; color: var(--text2); margin-top: 2px; }
-  .stop-addr { font-size: 11px; color: var(--text3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stop-addr { font-size: 11px; color: var(--text2); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   .stop-status {
     font-size: 18px; flex-shrink: 0; margin-top: 2px;
@@ -151,7 +151,7 @@
   }
   .stop-bultos {
     padding: 0 14px 8px 52px;
-    font-size: 11px; color: var(--text3);
+    font-size: 11px; color: var(--text2);
   }
   .stop-card-actions {
     padding: 0 12px 10px 12px;
@@ -409,20 +409,76 @@
 </head>
 <body>
 
-<!-- ════════════ UPLOAD SCREEN ════════════ -->
-<div class="screen active" id="screen-upload">
-  <div class="upload-logo">🚚</div>
-  <div class="upload-title">Ruta<span>App</span></div>
-  <div class="upload-sub">Sube el PDF de ruta del día<br>y gestiona tus entregas sin papel</div>
+<!-- ════════════ MENÚ PRINCIPAL ════════════ -->
+<div class="screen active" id="screen-menu">
+  <div style="flex:1; display:flex; flex-direction:column; padding:0 0 16px;">
 
-  <div class="upload-zone" id="upload-zone">
-    <input type="file" accept=".pdf" onchange="loadPDF(this)">
-    <div class="upload-zone-icon">📄</div>
-    <div class="upload-zone-text">Toca para subir el PDF</div>
-    <div class="upload-zone-hint">El PDF de ruta que recibes por WhatsApp</div>
+    <!-- Header estilo GestorRutas -->
+    <div style="padding:20px 20px 16px; background:var(--surface); border-bottom:1px solid var(--border);">
+      <div style="font-size:11px; font-weight:700; color:var(--accent); letter-spacing:.8px; text-transform:uppercase; margin-bottom:4px;" id="menu-datetime">Cargando…</div>
+      <div style="font-size:24px; font-weight:800; letter-spacing:-.5px;">Ruta<span style="color:var(--accent)">App</span></div>
+      <div style="font-size:13px; color:var(--text2); margin-top:2px;">Gestión de entregas del día</div>
+    </div>
+
+    <!-- Tarjetas de estado rápido -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:16px 16px 0;" id="menu-stats-grid"></div>
+
+    <!-- Opciones del menú -->
+    <div style="padding:16px; display:flex; flex-direction:column; gap:10px; flex:1;">
+
+      <!-- Ruta Actual: solo visible si hay ruta activa -->
+      <div id="menu-btn-actual" style="display:none;">
+        <button onclick="showScreen('screen-list')" style="width:100%; background:var(--accent); border:none; border-radius:14px; padding:20px; display:flex; align-items:center; gap:14px; cursor:pointer;" ontouchstart="this.style.opacity='.85'" ontouchend="this.style.opacity='1'">
+          <div style="font-size:32px; line-height:1;">🚛</div>
+          <div style="text-align:left;">
+            <div style="font-size:17px; font-weight:800; color:#fff;">Ruta actual</div>
+            <div style="font-size:12px; color:rgba(255,255,255,.75); margin-top:2px;" id="menu-ruta-actual-sub">Ver y gestionar entregas</div>
+          </div>
+          <div style="margin-left:auto; font-size:20px; color:rgba(255,255,255,.6);">›</div>
+        </button>
+      </div>
+
+      <!-- Cargar Ruta Nueva -->
+      <button onclick="showScreen('screen-upload')" style="width:100%; background:var(--surface); border:1.5px solid var(--border); border-radius:14px; padding:20px; display:flex; align-items:center; gap:14px; cursor:pointer;" ontouchstart="this.style.borderColor='var(--accent)'" ontouchend="this.style.borderColor='var(--border)'">
+        <div style="font-size:32px; line-height:1;">📄</div>
+        <div style="text-align:left;">
+          <div style="font-size:17px; font-weight:800; color:var(--text);">Cargar ruta</div>
+          <div style="font-size:12px; color:var(--text2); margin-top:2px;">Subir PDF o escanear albaranes</div>
+        </div>
+        <div style="margin-left:auto; font-size:20px; color:var(--text3);">›</div>
+      </button>
+
+      <!-- Rutas Anteriores -->
+      <button onclick="openHistorial()" style="width:100%; background:var(--surface); border:1.5px solid var(--border); border-radius:14px; padding:20px; display:flex; align-items:center; gap:14px; cursor:pointer;" ontouchstart="this.style.borderColor='var(--purple)'" ontouchend="this.style.borderColor='var(--border)'">
+        <div style="font-size:32px; line-height:1;">🗂️</div>
+        <div style="text-align:left;">
+          <div style="font-size:17px; font-weight:800; color:var(--text);">Rutas anteriores</div>
+          <div style="font-size:12px; color:var(--text2); margin-top:2px;" id="menu-historial-sub">Historial de días anteriores</div>
+        </div>
+        <div style="margin-left:auto; font-size:20px; color:var(--text3);">›</div>
+      </button>
+
+    </div>
   </div>
+</div>
 
-  <button class="upload-demo" onclick="loadDemo()">Probar con datos de ejemplo</button>
+<!-- ════════════ UPLOAD SCREEN ════════════ -->
+<div class="screen" id="screen-upload">
+  <div class="topbar">
+    <button class="topbar-back" onclick="showScreen('screen-menu')">←</button>
+    <div class="topbar-title">Cargar ruta</div>
+  </div>
+  <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 24px; gap:0;">
+    <div class="upload-zone" id="upload-zone" style="margin-bottom:16px;">
+      <input type="file" accept=".pdf" onchange="loadPDF(this)">
+      <div class="upload-zone-icon">📄</div>
+      <div class="upload-zone-text">Toca para subir el PDF</div>
+      <div class="upload-zone-hint">El PDF de ruta que recibes por WhatsApp</div>
+    </div>
+    <div style="width:100%; text-align:center; font-size:12px; color:var(--text3); margin:8px 0;">— o escanear albaranes —</div>
+    <button class="btn btn-ghost" style="width:100%; margin-bottom:12px;" onclick="openScan()">📷 Escanear albaranes con IA</button>
+    <button class="upload-demo" onclick="loadDemo()">Probar con datos de ejemplo</button>
+  </div>
 </div>
 
 <!-- ════════════ LIST SCREEN ════════════ -->
@@ -433,10 +489,13 @@
     <div class="list-stats" id="list-stats"></div>
   </div>
   <div class="list-scroll" id="list-scroll"></div>
-  <div style="padding:12px 12px 16px; background:var(--surface); border-top:1px solid var(--border); display:flex; gap:8px;">
+  <div style="padding:12px 12px 6px; background:var(--surface); border-top:1px solid var(--border); display:flex; gap:8px;">
     <button class="btn btn-ghost" style="flex:1" onclick="showScreen('screen-resumen')">📊 Resumen</button>
     <button class="btn btn-ghost" style="flex:1; color:var(--accent);" onclick="openScan()">➕ Añadir</button>
     <button class="btn btn-ghost" style="flex:1; color:var(--red);" onclick="openGestionar()">🗑 Gestionar</button>
+  </div>
+  <div style="padding:0 12px 16px; background:var(--surface);">
+    <button class="btn btn-green" id="btn-list-finalizar" onclick="checkAndFinalizar()" style="width:100%;">🏁 Finalizar ruta</button>
   </div>
 </div>
 
@@ -569,6 +628,63 @@
   <button class="btn-export" onclick="exportarResumen()">📤 Exportar resumen</button>
 </div>
 
+<!-- ════════════ HISTORIAL SCREEN ════════════ -->
+<div class="screen" id="screen-historial">
+  <div class="topbar">
+    <button class="topbar-back" onclick="showScreen('screen-menu')">←</button>
+    <div class="topbar-title">Rutas anteriores</div>
+  </div>
+  <div class="list-scroll" id="historial-list"></div>
+</div>
+
+<!-- ════════════ FINALIZAR RUTA SCREEN ════════════ -->
+<div class="screen" id="screen-finalizar">
+  <div class="topbar">
+    <button class="topbar-back" onclick="showScreen('screen-list')">←</button>
+    <div class="topbar-title">Finalizar ruta</div>
+  </div>
+  <div class="detail-scroll" style="padding:20px 16px;">
+
+    <div style="text-align:center; padding:20px 0 24px;">
+      <div style="font-size:52px; margin-bottom:12px;">🏁</div>
+      <div style="font-size:20px; font-weight:800; margin-bottom:6px;">¡Ruta completada!</div>
+      <div style="font-size:14px; color:var(--text2); line-height:1.5;" id="finalizar-resumen-txt"></div>
+    </div>
+
+    <!-- KPIs finales -->
+    <div class="resumen-kpi" style="margin-bottom:20px;" id="finalizar-kpis"></div>
+
+    <!-- Aviso pendientes si los hay -->
+    <div id="finalizar-pendientes-aviso" style="display:none; background:#2a1515; border:1px solid var(--red); border-radius:10px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:var(--red);">
+      ⚠️ Aún hay paradas pendientes. Confirma todas las entregas antes de finalizar.
+    </div>
+
+    <!-- Subir Hoja de Ruta -->
+    <div style="margin-bottom:16px;">
+      <div class="section-label" style="margin-bottom:8px;">📋 Hoja de ruta firmada</div>
+      <div style="font-size:13px; color:var(--text2); margin-bottom:12px; line-height:1.5;">
+        Sube una foto o escaneo de la hoja de ruta firmada para completar el cierre del día.
+      </div>
+      <label id="hoja-upload-zone" style="
+        display:block; background:var(--surface); border:2px dashed var(--border);
+        border-radius:12px; padding:32px 16px; text-align:center; cursor:pointer;
+        transition:border-color .2s; position:relative;">
+        <input type="file" accept="image/*,application/pdf" onchange="hojaUploaded(this)" style="position:absolute; inset:0; opacity:0; cursor:pointer;">
+        <div style="font-size:32px; margin-bottom:8px;" id="hoja-icon">📄</div>
+        <div style="font-size:14px; font-weight:700; color:var(--text2);" id="hoja-label">Toca para subir</div>
+        <div style="font-size:12px; color:var(--text3); margin-top:4px;">Foto, imagen o PDF</div>
+      </label>
+    </div>
+
+  </div>
+  <div style="padding:12px 16px 24px; background:var(--surface); border-top:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
+    <button id="btn-cerrar-ruta" class="btn btn-green" onclick="cerrarRuta()" disabled style="opacity:.4; cursor:not-allowed;">
+      ✅ Cerrar ruta y guardar en historial
+    </button>
+    <button class="btn btn-ghost" onclick="showScreen('screen-list')">← Volver a la lista</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -578,11 +694,13 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 
 let stops = [];
 let currentStopIdx = null;
+let routeName = ''; // nombre del PDF cargado sin extensión
 
 // ── SCREEN NAV ──────────────────────────────────────────────────────
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  if (id === 'screen-menu') updateMenu();
   if (id === 'screen-list') renderList();
   if (id === 'screen-resumen') renderResumen();
 }
@@ -601,6 +719,8 @@ function toast(msg, type='') {
 async function loadPDF(input) {
   if (!input.files.length) return;
   const file = input.files[0];
+  // Capturar nombre sin extensión: "Malaga.pdf" → "Malaga"
+  routeName = file.name.replace(/\.pdf$/i, '').trim();
   toast('Leyendo PDF…');
   try {
     const ab = await file.arrayBuffer();
@@ -833,6 +953,7 @@ function parsePDFFallback(raw) {
 
 // ── DEMO DATA ────────────────────────────────────────────────────────
 function loadDemo() {
+  routeName = 'Demo — Málaga';
   stops = [
     {
       id: '29006_MALAGA_CENTRO',
@@ -918,7 +1039,7 @@ function loadDemo() {
 function renderList() {
   const now = new Date();
   document.getElementById('list-date').textContent = now.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
-  document.getElementById('list-title').textContent = `${stops.length} entregas`;
+  document.getElementById('list-title').textContent = routeName || 'Entregas del día';
 
   const done = stops.filter(s => s.status === 'done').length;
   const inc  = stops.filter(s => s.status === 'incident').length;
@@ -984,7 +1105,7 @@ function openGestionar() {
           <div style="flex:1; min-width:0;">
             <div style="font-size:14px; font-weight:700; color:var(--text); line-height:1.3;">${s.company}</div>
             <div style="font-size:12px; color:var(--text2); margin-top:2px;">${s.cp} — ${s.city}</div>
-            <div style="font-size:11px; color:var(--text3); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${s.address}</div>
+            <div style="font-size:11px; color:var(--text2); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${s.address}</div>
           </div>
           <div style="font-size:18px; flex-shrink:0;">${icon}</div>
         </div>
@@ -1134,10 +1255,12 @@ function openStop(idx) {
 
   // Action bar
   let actionsHtml = '';
+  const hasPhotos = s.albaranPhotos && Object.values(s.albaranPhotos).some(arr => arr && arr.length > 0);
   if (s.status === 'pending') {
     actionsHtml = `
-      <button class="btn btn-green" onclick="markDone()">✅ Marcar como entregado</button>
-      <button class="btn btn-amber" onclick="openIncident()">⚠️ Registrar incidencia</button>
+      ${!hasPhotos ? `<div style="background:#2a1515; border:1px solid #FF444455; border-radius:8px; padding:9px 12px; font-size:12px; color:var(--red); font-weight:600; text-align:center; margin-bottom:0;">📷 Añade foto del albarán para poder confirmar</div>` : ''}
+      <button class="btn btn-green" onclick="markDone()" style="${!hasPhotos ? 'opacity:.45;' : ''}">✅ Marcar como entregado</button>
+      <button class="btn btn-amber" onclick="openIncident()" style="${!hasPhotos ? 'opacity:.45;' : ''}">⚠️ Registrar incidencia</button>
     `;
   } else if (s.status === 'done') {
     actionsHtml = `
@@ -1161,7 +1284,21 @@ function openStop(idx) {
 }
 
 // ── ACTIONS ──────────────────────────────────────────────────────────
+function hasPhotoRequirement() {
+  // Returns true if the current stop has at least one photo on any albaran
+  const s = stops[currentStopIdx];
+  if (!s.albaranPhotos) return false;
+  return Object.values(s.albaranPhotos).some(arr => arr && arr.length > 0);
+}
+
 function markDone() {
+  if (!hasPhotoRequirement()) {
+    toast('📷 Añade foto del albarán antes de marcar entregado', 'warn');
+    // Scroll to photos section
+    const firstPhoto = document.querySelector('.albaran-cam-btn');
+    if (firstPhoto) firstPhoto.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
   stops[currentStopIdx].status = 'done';
   saveState();
   toast('Entrega registrada ✓', 'ok');
@@ -1175,6 +1312,12 @@ function markDone() {
 }
 
 function openIncident() {
+  if (!hasPhotoRequirement()) {
+    toast('📷 Añade foto del albarán antes de registrar incidencia', 'warn');
+    const firstPhoto = document.querySelector('.albaran-cam-btn');
+    if (firstPhoto) firstPhoto.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return;
+  }
   stops[currentStopIdx].status = 'incident';
   document.getElementById('incident-section').classList.add('open');
   document.getElementById('detail-actions').innerHTML = `
@@ -1299,11 +1442,12 @@ function exportarResumen() {
 // ── RESET ────────────────────────────────────────────────────────────
 function confirmReset() {
   stops = [];
+  routeName = '';
   localStorage.removeItem('rutaapp_stops');
-  // Reset file input so same PDF can be re-uploaded
+  localStorage.removeItem('rutaapp_routename');
   const fi = document.querySelector('#screen-upload input[type=file]');
   if (fi) fi.value = '';
-  showScreen('screen-upload');
+  showScreen('screen-menu');
 }
 
 // ── PERSISTENCE ──────────────────────────────────────────────────────
@@ -1312,17 +1456,17 @@ function saveState() {
     // Save without photos to avoid quota issues, photos stay in memory
     const toSave = stops.map(s => ({...s, photos: []}));
     localStorage.setItem('rutaapp_stops', JSON.stringify(toSave));
+    localStorage.setItem('rutaapp_routename', routeName);
   } catch(e) {}
 }
 
 function loadState() {
   try {
     const saved = localStorage.getItem('rutaapp_stops');
-    if (saved) {
-      stops = JSON.parse(saved);
-      if (stops.length > 0) showScreen('screen-list');
-    }
+    if (saved) stops = JSON.parse(saved);
+    routeName = localStorage.getItem('rutaapp_routename') || '';
   } catch(e) {}
+  showScreen('screen-menu');
 }
 
 function openManualAdd() {
@@ -1552,6 +1696,227 @@ Si una página tiene varios albaranes, crea una entrada por albarán.`;
 function showScanResult(msg, type) {
   const el = document.getElementById('scan-result-msg');
   el.innerHTML = `<div class="scan-result ${type}">${msg}</div>`;
+}
+
+// ── MENÚ PRINCIPAL ───────────────────────────────────────────────────
+function updateMenu() {
+  // Fecha y hora
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+  const dateStr = now.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
+  const dtEl = document.getElementById('menu-datetime');
+  if (dtEl) dtEl.textContent = `${timeStr} · ${dateStr.charAt(0).toUpperCase() + dateStr.slice(1)}`;
+
+  // Botón ruta actual
+  const btnActual = document.getElementById('menu-btn-actual');
+  if (btnActual) {
+    if (stops.length > 0) {
+      btnActual.style.display = 'block';
+      const done = stops.filter(s => s.status === 'done').length;
+      const inc  = stops.filter(s => s.status === 'incident').length;
+      const pend = stops.filter(s => s.status === 'pending').length;
+      const sub = document.getElementById('menu-ruta-actual-sub');
+      if (sub) sub.textContent = `${routeName ? routeName + ' · ' : ''}${done} entregadas · ${inc} incidencias · ${pend} pendientes`;
+    } else {
+      btnActual.style.display = 'none';
+    }
+  }
+
+  // Stats grid
+  const grid = document.getElementById('menu-stats-grid');
+  if (grid) {
+    if (stops.length > 0) {
+      const done = stops.filter(s => s.status === 'done').length;
+      const pend = stops.filter(s => s.status === 'pending').length;
+      const inc2 = stops.filter(s => s.status === 'incident').length;
+      grid.innerHTML = `
+        <div style="background:var(--surface); border:1px solid var(--border); border-top:3px solid var(--green); border-radius:12px; padding:14px; text-align:center;">
+          <div style="font-size:28px; font-weight:800; color:var(--green); line-height:1;">${done}</div>
+          <div style="font-size:10px; font-weight:700; color:var(--text2); margin-top:4px; text-transform:uppercase; letter-spacing:.5px;">Entregadas</div>
+        </div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-top:3px solid var(--red); border-radius:12px; padding:14px; text-align:center;">
+          <div style="font-size:28px; font-weight:800; color:var(--red); line-height:1;">${inc2}</div>
+          <div style="font-size:10px; font-weight:700; color:var(--text2); margin-top:4px; text-transform:uppercase; letter-spacing:.5px;">Incidencias</div>
+        </div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-top:3px solid var(--amber); border-radius:12px; padding:14px; text-align:center;">
+          <div style="font-size:28px; font-weight:800; color:var(--amber); line-height:1;">${pend}</div>
+          <div style="font-size:10px; font-weight:700; color:var(--text2); margin-top:4px; text-transform:uppercase; letter-spacing:.5px;">Pendientes</div>
+        </div>
+        <div style="background:var(--surface); border:1px solid var(--border); border-top:3px solid var(--blue); border-radius:12px; padding:14px; text-align:center;">
+          <div style="font-size:28px; font-weight:800; color:var(--blue); line-height:1;">${stops.length}</div>
+          <div style="font-size:10px; font-weight:700; color:var(--text2); margin-top:4px; text-transform:uppercase; letter-spacing:.5px;">Total</div>
+        </div>
+      `;
+    } else {
+      grid.innerHTML = '';
+    }
+  }
+
+  // Historial sub
+  const hist = getHistorial();
+  const subHist = document.getElementById('menu-historial-sub');
+  if (subHist) {
+    subHist.textContent = hist.length > 0
+      ? `${hist.length} ruta${hist.length > 1 ? 's' : ''} guardada${hist.length > 1 ? 's' : ''}`
+      : 'Sin rutas anteriores';
+  }
+}
+
+setInterval(updateMenu, 30000);
+
+// ── HISTORIAL ─────────────────────────────────────────────────────────
+function getHistorial() {
+  try {
+    return JSON.parse(localStorage.getItem('rutaapp_historial') || '[]');
+  } catch(e) { return []; }
+}
+
+function saveHistorial(hist) {
+  try { localStorage.setItem('rutaapp_historial', JSON.stringify(hist)); } catch(e) {}
+}
+
+function openHistorial() {
+  const hist = getHistorial();
+  const list = document.getElementById('historial-list');
+  if (hist.length === 0) {
+    list.innerHTML = `
+      <div style="padding:60px 24px; text-align:center;">
+        <div style="font-size:48px; margin-bottom:12px;">🗂️</div>
+        <div style="font-size:16px; font-weight:700; color:var(--text2); margin-bottom:6px;">Sin rutas anteriores</div>
+        <div style="font-size:13px; color:var(--text3);">Las rutas finalizadas aparecerán aquí</div>
+      </div>`;
+  } else {
+    list.innerHTML = hist.slice().reverse().map((r, i) => {
+      const realIdx = hist.length - 1 - i;
+      const done = r.stops.filter(s => s.status === 'done').length;
+      const inc  = r.stops.filter(s => s.status === 'incident').length;
+      return `
+        <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; margin:10px 12px; padding:14px;">
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+            <div style="font-size:16px; font-weight:800; flex:1; color:var(--accent);">${r.nombre || r.fecha}</div>
+            <div style="font-size:11px; font-weight:700; color:var(--text3);">${r.stops.length} paradas</div>
+          </div>
+          <div style="font-size:11px; color:var(--text2); margin-bottom:6px;">📅 ${r.fecha}</div>
+          <div style="display:flex; gap:8px; margin-bottom:10px;">
+            <div style="background:var(--surface2); border-radius:20px; padding:4px 10px; font-size:11px; font-weight:700; color:var(--green);">✅ ${done} entregadas</div>
+            ${inc > 0 ? `<div style="background:var(--surface2); border-radius:20px; padding:4px 10px; font-size:11px; font-weight:700; color:var(--amber);">⚠️ ${inc} incidencias</div>` : ''}
+          </div>
+          ${r.hojaRuta ? `<div style="font-size:11px; color:var(--accent); font-weight:600;">📋 Hoja de ruta adjunta</div>` : `<div style="font-size:11px; color:var(--text3);">Sin hoja de ruta</div>`}
+        </div>
+      `;
+    }).join('');
+  }
+  showScreen('screen-historial');
+}
+
+// ── FINALIZAR RUTA ────────────────────────────────────────────────────
+let hojaRutaData = null;
+
+function openFinalizar() {
+  hojaRutaData = null;
+  // Reset upload zone
+  const icon = document.getElementById('hoja-icon');
+  const label = document.getElementById('hoja-label');
+  const zone = document.getElementById('hoja-upload-zone');
+  if (icon) icon.textContent = '📄';
+  if (label) label.textContent = 'Toca para subir';
+  if (zone) zone.style.borderColor = 'var(--border)';
+
+  const done = stops.filter(s => s.status === 'done').length;
+  const inc  = stops.filter(s => s.status === 'incident').length;
+  const pend = stops.filter(s => s.status === 'pending').length;
+  const allConfirmed = pend === 0;
+
+  // Aviso pendientes
+  const aviso = document.getElementById('finalizar-pendientes-aviso');
+  if (aviso) aviso.style.display = allConfirmed ? 'none' : 'block';
+
+  // KPIs
+  const kpis = document.getElementById('finalizar-kpis');
+  if (kpis) kpis.innerHTML = `
+    <div class="kpi-box green"><div class="num">${done}</div><div class="lbl">Entregadas</div></div>
+    <div class="kpi-box amber"><div class="num">${inc}</div><div class="lbl">Incidencias</div></div>
+    <div class="kpi-box blue"><div class="num">${stops.length}</div><div class="lbl">Total</div></div>
+    <div class="kpi-box gray"><div class="num">${pend}</div><div class="lbl">Pendientes</div></div>
+  `;
+
+  // Texto resumen
+  const txt = document.getElementById('finalizar-resumen-txt');
+  if (txt) {
+    const fecha = new Date().toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
+    txt.textContent = `${fecha} · Sube la hoja de ruta firmada para cerrar el día`;
+  }
+
+  updateFinalizarBtn();
+  showScreen('screen-finalizar');
+}
+
+function hojaUploaded(input) {
+  if (!input.files.length) return;
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = e => {
+    hojaRutaData = { name: file.name, data: e.target.result };
+    const icon = document.getElementById('hoja-icon');
+    const label = document.getElementById('hoja-label');
+    const zone = document.getElementById('hoja-upload-zone');
+    if (icon) icon.textContent = '✅';
+    if (label) label.textContent = file.name;
+    if (zone) zone.style.borderColor = 'var(--green)';
+    updateFinalizarBtn();
+    toast('Hoja de ruta cargada ✓', 'ok');
+  };
+  reader.readAsDataURL(file);
+}
+
+function updateFinalizarBtn() {
+  const pend = stops.filter(s => s.status === 'pending').length;
+  const allConfirmed = pend === 0;
+  const btn = document.getElementById('btn-cerrar-ruta');
+  if (!btn) return;
+  const canClose = allConfirmed && hojaRutaData !== null;
+  btn.disabled = !canClose;
+  btn.style.opacity = canClose ? '1' : '.4';
+  btn.style.cursor  = canClose ? 'pointer' : 'not-allowed';
+}
+
+function checkAndFinalizar() {
+  const pend = stops.filter(s => s.status === 'pending').length;
+  if (pend > 0) {
+    toast(`Quedan ${pend} parada${pend > 1 ? 's' : ''} sin confirmar`, 'warn');
+    // Still allow going to finalizar screen to see the state
+  }
+  openFinalizar();
+}
+
+function cerrarRuta() {
+  const pend = stops.filter(s => s.status === 'pending').length;
+  if (pend > 0) { toast('Quedan paradas pendientes', 'warn'); return; }
+  if (!hojaRutaData) { toast('Sube la hoja de ruta primero', 'warn'); return; }
+
+  const hist = getHistorial();
+  const fecha = new Date().toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  hist.push({
+    fecha,
+    timestamp: Date.now(),
+    nombre: routeName || fecha,
+    stops: stops.map(s => ({ company: s.company, cp: s.cp, city: s.city, status: s.status, incidentType: s.incidentType })),
+    hojaRuta: hojaRutaData.name
+  });
+  saveHistorial(hist);
+
+  // Limpiar ruta actual
+  stops = [];
+  hojaRutaData = null;
+  routeName = '';
+  localStorage.removeItem('rutaapp_stops');
+  localStorage.removeItem('rutaapp_routename');
+
+  toast('¡Ruta cerrada y guardada! ✓', 'ok');
+  setTimeout(() => {
+    updateMenu();
+    showScreen('screen-menu');
+  }, 800);
 }
 
 // ── DRAG & DROP ──────────────────────────────────────────────────────
