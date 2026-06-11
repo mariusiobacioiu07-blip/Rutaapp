@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>RutaApp — Entregas del día</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    --bg:       #0F1419;
+    --surface:  #1A2332;
+    --surface2: #243044;
+    --border:   #2E3D52;
+    --accent:   #2563EB;
+    --green:    #10B981;
+    --amber:    #F59E0B;
+    --red:      #EF4444;
+    --text:     #F0F4F8;
+    --text2:    #8899AA;
+    --text3:    #556677;
+    --radius:   12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); overscroll-behavior: none; }
+
+  /* ── SCREENS ── */
+  .screen { display: none; flex-direction: column; height: 100dvh; overflow: hidden; }
+  .screen.active { display: flex; }
+
+  /* ── UPLOAD SCREEN ── */
+  #screen-upload {
+    align-items: center; justify-content: center;
+    padding: 32px 24px; gap: 0;
+  }
+  .upload-logo {
+    font-size: 48px; margin-bottom: 16px;
+  }
+  .upload-title {
+    font-size: 26px; font-weight: 800; text-align: center;
+    letter-spacing: -0.5px; margin-bottom: 8px;
+  }
+  .upload-title span { color: var(--accent); }
+  .upload-sub {
+    font-size: 14px; color: var(--text2); text-align: center;
+    margin-bottom: 40px; line-height: 1.5;
+  }
+  .upload-zone {
+    width: 100%; background: var(--surface);
+    border: 2px dashed var(--border); border-radius: var(--radius);
+    padding: 40px 24px; text-align: center; cursor: pointer;
+    transition: border-color .2s, background .2s;
+    position: relative; margin-bottom: 16px;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: #1a2c4a; }
+  .upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .upload-zone-icon { font-size: 36px; margin-bottom: 12px; }
+  .upload-zone-text { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .upload-zone-hint { font-size: 12px; color: var(--text2); }
+  .upload-demo {
+    font-size: 13px; color: var(--accent); cursor: pointer;
+    text-decoration: underline; text-underline-offset: 3px;
+    background: none; border: none; font-family: inherit;
+  }
+
+  /* ── TOPBAR ── */
+  .topbar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+    flex-shrink: 0;
+  }
+  .topbar-back {
+    background: none; border: none; color: var(--accent);
+    font-size: 20px; cursor: pointer; padding: 2px; line-height: 1;
+  }
+  .topbar-title { font-size: 16px; font-weight: 700; flex: 1; }
+  .topbar-badge {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 10px;
+    font-size: 11px; font-weight: 700; color: var(--text2);
+  }
+
+  /* ── ROUTE LIST ── */
+  #screen-list { }
+  .list-header {
+    background: var(--surface); padding: 16px;
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .list-date { font-size: 12px; color: var(--text2); margin-bottom: 2px; }
+  .list-title { font-size: 20px; font-weight: 800; letter-spacing: -.3px; }
+  .list-stats {
+    display: flex; gap: 12px; margin-top: 12px;
+  }
+  .stat-pill {
+    display: flex; align-items: center; gap: 5px;
+    background: var(--surface2); border-radius: 20px;
+    padding: 5px 10px; font-size: 12px; font-weight: 600;
+  }
+  .stat-pill .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .dot-green { background: var(--green); }
+  .dot-amber { background: var(--amber); }
+  .dot-gray  { background: var(--text3); }
+
+  .list-scroll { flex: 1; overflow-y: auto; padding: 12px; }
+
+  .stop-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); margin-bottom: 10px;
+    overflow: hidden; cursor: pointer;
+    transition: border-color .15s, transform .1s;
+    active: transform: scale(.99);
+  }
+  .stop-card:active { transform: scale(.99); }
+  .stop-card.done { border-color: var(--green); opacity: .75; }
+  .stop-card.incident { border-color: var(--amber); }
+
+  .stop-top {
+    padding: 14px 14px 10px;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .stop-num {
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--surface2); color: var(--text2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
+  }
+  .stop-card.done .stop-num { background: #0d3d2a; color: var(--green); }
+  .stop-card.incident .stop-num { background: #3d2c0d; color: var(--amber); }
+
+  .stop-info { flex: 1; min-width: 0; }
+  .stop-name { font-size: 14px; font-weight: 700; line-height: 1.3; }
+  .stop-city { font-size: 11px; color: var(--text2); margin-top: 2px; }
+  .stop-addr { font-size: 11px; color: var(--text3); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .stop-status {
+    font-size: 18px; flex-shrink: 0; margin-top: 2px;
+  }
+
+  .stop-docs {
+    padding: 0 14px 12px 52px;
+    display: flex; flex-wrap: wrap; gap: 6px;
+  }
+  .doc-tag {
+    background: var(--surface2); border-radius: 6px;
+    padding: 3px 8px; font-size: 10px; font-weight: 600;
+    color: var(--text2); font-family: monospace;
+  }
+  .stop-bultos {
+    padding: 0 14px 12px 52px;
+    font-size: 11px; color: var(--text3);
+  }
+
+  /* ── DETAIL SCREEN ── */
+  #screen-detail { }
+  .detail-scroll { flex: 1; overflow-y: auto; padding: 16px; }
+
+  .detail-address-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 16px;
+  }
+  .detail-address-card .label { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
+  .detail-company { font-size: 17px; font-weight: 800; margin-bottom: 4px; }
+  .detail-addr-line { font-size: 13px; color: var(--text2); margin-bottom: 2px; }
+  .detail-phone {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 8px; background: var(--surface2);
+    border-radius: 8px; padding: 8px 12px;
+    font-size: 13px; font-weight: 600; color: var(--accent);
+    text-decoration: none;
+  }
+
+  .docs-section { margin-bottom: 16px; }
+  .section-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px; }
+  .doc-row {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 11px 13px; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .doc-row-num { font-size: 11px; font-family: monospace; color: var(--accent); font-weight: 700; flex-shrink: 0; }
+  .doc-row-name { font-size: 12px; color: var(--text); flex: 1; line-height: 1.3; }
+  .doc-row-qty { font-size: 12px; font-weight: 700; color: var(--text2); flex-shrink: 0; }
+
+  /* ── ACTION BUTTONS ── */
+  .action-bar {
+    padding: 12px 16px; background: var(--surface);
+    border-top: 1px solid var(--border); flex-shrink: 0;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .btn {
+    width: 100%; padding: 15px; border-radius: 10px; border: none;
+    font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    gap: 8px; transition: opacity .15s, transform .1s;
+  }
+  .btn:active { transform: scale(.98); opacity: .9; }
+  .btn-green { background: var(--green); color: #fff; }
+  .btn-amber { background: var(--surface2); color: var(--amber); border: 1.5px solid var(--amber); }
+  .btn-row { display: flex; gap: 8px; }
+  .btn-row .btn { flex: 1; }
+  .btn-ghost { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); font-size: 13px; padding: 11px; }
+
+  /* ── PHOTO SECTION ── */
+  .photo-section { margin-bottom: 16px; }
+  .photo-upload-zone {
+    background: var(--surface); border: 2px dashed var(--border);
+    border-radius: var(--radius); padding: 28px 16px; text-align: center;
+    cursor: pointer; position: relative; transition: border-color .15s;
+  }
+  .photo-upload-zone:hover { border-color: var(--accent); }
+  .photo-upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .photo-upload-zone .icon { font-size: 28px; margin-bottom: 8px; }
+  .photo-upload-zone .text { font-size: 13px; font-weight: 600; color: var(--text2); }
+  .photo-preview {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px;
+  }
+  .photo-thumb {
+    aspect-ratio: 1; border-radius: 8px; overflow: hidden;
+    background: var(--surface2); position: relative;
+  }
+  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .photo-thumb-remove {
+    position: absolute; top: 4px; right: 4px;
+    background: rgba(0,0,0,.6); color: #fff;
+    border: none; border-radius: 50%; width: 20px; height: 20px;
+    font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ── INCIDENT FORM ── */
+  .incident-section { margin-bottom: 16px; display: none; }
+  .incident-section.open { display: block; }
+  .incident-textarea {
+    width: 100%; background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 12px; font-family: 'Inter', sans-serif;
+    font-size: 14px; color: var(--text); resize: none; outline: none;
+    transition: border-color .15s; min-height: 80px;
+  }
+  .incident-textarea:focus { border-color: var(--amber); }
+  .incident-types {
+    display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;
+  }
+  .incident-type {
+    background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 20px; padding: 6px 12px;
+    font-size: 12px; font-weight: 600; color: var(--text2);
+    cursor: pointer; transition: all .15s;
+  }
+  .incident-type.selected { border-color: var(--amber); color: var(--amber); background: #3d2c0d; }
+
+  /* ── STATUS BADGE on detail ── */
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    border-radius: 20px; padding: 6px 12px;
+    font-size: 12px; font-weight: 700; margin-bottom: 16px;
+  }
+  .badge-done { background: #0d3d2a; color: var(--green); }
+  .badge-incident { background: #3d2c0d; color: var(--amber); }
+  .badge-pending { background: var(--surface2); color: var(--text2); }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 20px;
+    font-size: 14px; font-weight: 600; white-space: nowrap;
+    transition: transform .25s; z-index: 999; pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.ok { border-color: var(--green); color: var(--green); }
+  .toast.warn { border-color: var(--amber); color: var(--amber); }
+
+  /* ── RESUMEN SCREEN ── */
+  #screen-resumen { }
+  .resumen-scroll { flex: 1; overflow-y: auto; padding: 16px; }
+  .resumen-kpi {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;
+  }
+  .kpi-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; text-align: center;
+  }
+  .kpi-box .num { font-size: 32px; font-weight: 800; line-height: 1; }
+  .kpi-box .lbl { font-size: 11px; color: var(--text2); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+  .kpi-box.green .num { color: var(--green); }
+  .kpi-box.amber .num { color: var(--amber); }
+  .kpi-box.blue  .num { color: var(--accent); }
+  .kpi-box.gray  .num { color: var(--text2); }
+
+  .resumen-list-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .resumen-list-item .ico { font-size: 18px; flex-shrink: 0; }
+  .resumen-list-item .name { font-size: 13px; font-weight: 600; flex: 1; }
+  .resumen-list-item .st { font-size: 11px; font-weight: 700; }
+  .st-ok { color: var(--green); }
+  .st-inc { color: var(--amber); }
+  .st-pend { color: var(--text3); }
+
+  .btn-export {
+    margin: 0 16px 16px; background: var(--accent); color: #fff;
+    border: none; border-radius: 10px; padding: 15px;
+    font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 700;
+    cursor: pointer; width: calc(100% - 32px); display: flex;
+    align-items: center; justify-content: center; gap: 8px;
+  }
+
+  /* ── ALBARAN BLOCKS ── */
+  .albaran-block {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; margin-bottom: 10px; overflow: hidden;
+  }
+  .albaran-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px; background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .albaran-num {
+    font-size: 11px; font-family: monospace; font-weight: 700;
+    color: var(--accent); flex: 1;
+  }
+  .albaran-cam-btn {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 8px; padding: 5px 10px;
+    font-size: 12px; font-weight: 600; color: var(--text2);
+    cursor: pointer; white-space: nowrap; flex-shrink: 0;
+    transition: border-color .15s, color .15s;
+  }
+  .albaran-cam-btn:active { border-color: var(--accent); color: var(--accent); }
+  .albaran-block .doc-row {
+    border: none; border-bottom: 1px solid var(--border);
+    border-radius: 0; margin-bottom: 0; padding: 9px 12px;
+  }
+  .albaran-block .doc-row:last-of-type { border-bottom: none; }
+
+  /* ── SCAN SCREEN ── */
+  .scan-header { padding: 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
+  .scan-pages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .scan-page-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden; position: relative;
+  }
+  .scan-page-card img { width: 100%; display: block; max-height: 200px; object-fit: cover; }
+  .scan-page-label {
+    padding: 8px 12px; font-size: 12px; font-weight: 600; color: var(--text2);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .scan-page-remove {
+    background: none; border: none; color: var(--red);
+    font-size: 16px; cursor: pointer; padding: 2px 6px;
+  }
+  .scan-add-btn {
+    border: 2px dashed var(--border); border-radius: 10px;
+    background: none; color: var(--text2); padding: 18px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: border-color .15s, color .15s;
+  }
+  .scan-add-btn:active { border-color: var(--accent); color: var(--accent); }
+  .scan-result {
+    margin: 0 16px 8px; padding: 12px 14px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; font-size: 13px; color: var(--text2);
+  }
+  .scan-result.ok  { border-color: var(--green); color: var(--green); }
+  .scan-result.warn { border-color: var(--amber); color: var(--amber); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ════════════ UPLOAD SCREEN ════════════ -->
+<div class="screen active" id="screen-upload">
+  <div class="upload-logo">🚚</div>
+  <div class="upload-title">Ruta<span>App</span></div>
+  <div class="upload-sub">Sube el PDF de ruta del día<br>y gestiona tus entregas sin papel</div>
+
+  <div class="upload-zone" id="upload-zone">
+    <input type="file" accept=".pdf" onchange="loadPDF(this)">
+    <div class="upload-zone-icon">📄</div>
+    <div class="upload-zone-text">Toca para subir el PDF</div>
+    <div class="upload-zone-hint">El PDF de ruta que recibes por WhatsApp</div>
+  </div>
+
+  <button class="upload-demo" onclick="loadDemo()">Probar con datos de ejemplo</button>
+</div>
+
+<!-- ════════════ LIST SCREEN ════════════ -->
+<div class="screen" id="screen-list">
+  <div class="list-header">
+    <div class="list-date" id="list-date"></div>
+    <div class="list-title" id="list-title">Entregas del día</div>
+    <div class="list-stats" id="list-stats"></div>
+  </div>
+  <div class="list-scroll" id="list-scroll"></div>
+  <div style="padding:12px 12px 16px; background:var(--surface); border-top:1px solid var(--border); display:flex; gap:8px;">
+    <button class="btn btn-ghost" style="flex:1" onclick="showScreen('screen-resumen')">📊 Resumen</button>
+    <button class="btn btn-ghost" style="flex:1; color:var(--green);" onclick="openScan()">📷 Escanear</button>
+    <button class="btn btn-ghost" style="flex:1; color:var(--red);" onclick="confirmReset()">📄 Nuevo PDF</button>
+  </div>
+</div>
+
+<!-- ════════════ SCAN SCREEN ════════════ -->
+<div class="screen" id="screen-scan">
+  <div class="topbar">
+    <button class="topbar-back" onclick="showScreen('screen-list')">←</button>
+    <div class="topbar-title">Escanear papel</div>
+  </div>
+  <div class="scan-header">
+    <div style="font-size:13px; color:var(--text2); line-height:1.5;">
+      Haz foto a cada página del papel físico.<br>
+      La IA detectará tiendas y albaranes nuevos y los añadirá sin duplicar.
+    </div>
+  </div>
+  <div class="scan-pages" id="scan-pages">
+    <!-- páginas escaneadas -->
+  </div>
+  <div id="scan-result-msg"></div>
+  <div style="padding:12px 12px 16px; display:flex; flex-direction:column; gap:8px;">
+    <label style="display:flex; align-items:center; justify-content:center; gap:8px; background:var(--surface); border:2px dashed var(--border); border-radius:10px; padding:14px; font-size:14px; font-weight:600; color:var(--text2); cursor:pointer;">
+      <input type="file" accept="image/*" capture="environment" onchange="addScanPage(this)" style="display:none">
+      📷 Añadir página
+    </label>
+    <button class="btn btn-green" id="scan-process-btn" onclick="processScan()" style="display:none">
+      ✨ Procesar con IA
+    </button>
+  </div>
+</div>
+
+<!-- ════════════ DETAIL SCREEN ════════════ -->
+<div class="screen" id="screen-detail">
+  <div class="topbar">
+    <button class="topbar-back" onclick="showScreen('screen-list')">←</button>
+    <div class="topbar-title" id="detail-topbar-title">Entrega</div>
+    <div class="topbar-badge" id="detail-topbar-badge"></div>
+  </div>
+  <div class="detail-scroll" id="detail-scroll">
+    <!-- filled by JS -->
+  </div>
+  <div class="action-bar" id="detail-actions">
+    <!-- filled by JS -->
+  </div>
+</div>
+
+<!-- ════════════ RESUMEN SCREEN ════════════ -->
+<div class="screen" id="screen-resumen">
+  <div class="topbar">
+    <button class="topbar-back" onclick="showScreen('screen-list')">←</button>
+    <div class="topbar-title">Resumen del día</div>
+  </div>
+  <div class="resumen-scroll" id="resumen-scroll"></div>
+  <button class="btn-export" onclick="exportarResumen()">📤 Exportar resumen</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+// ── CONFIG ──────────────────────────────────────────────────────────
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let stops = [];
+let currentStopIdx = null;
+
+// ── SCREEN NAV ──────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'screen-list') renderList();
+  if (id === 'screen-resumen') renderResumen();
+}
+
+// ── TOAST ────────────────────────────────────────────────────────────
+let toastTimer;
+function toast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' '+type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── PDF PARSING ──────────────────────────────────────────────────────
+async function loadPDF(input) {
+  if (!input.files.length) return;
+  const file = input.files[0];
+  toast('Leyendo PDF…');
+  try {
+    const ab = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
+    let fullText = '';
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const items = content.items.filter(it => it.str.trim());
+
+      // Sort by Y descending (top of page first), then X ascending (left to right)
+      // transform[4] = X, transform[5] = Y (PDF coords: Y=0 is bottom)
+      items.sort((a, b) => {
+        const dy = b.transform[5] - a.transform[5];
+        if (Math.abs(dy) > 3) return dy;           // different rows
+        return a.transform[4] - b.transform[4];    // same row: left first
+      });
+
+      // Group into lines by Y proximity
+      let lines = [];
+      let curLine = [];
+      let lastY = null;
+      for (const item of items) {
+        const y = item.transform[5];
+        if (lastY !== null && Math.abs(y - lastY) > 3) {
+          lines.push(curLine);
+          curLine = [];
+        }
+        curLine.push(item.str);
+        lastY = y;
+      }
+      if (curLine.length) lines.push(curLine);
+
+      fullText += lines.map(l => l.join(' ')).join('\n') + '\n';
+    }
+
+
+    stops = [];
+    stops = parsePDF(fullText);
+    if (stops.length === 0) {
+      toast('No se encontraron entregas en el PDF', 'warn');
+      console.warn('[RutaApp] 0 paradas. Texto completo:\n', fullText);
+      return;
+    }
+    saveState();
+    toast(`${stops.length} paradas cargadas ✓`, 'ok');
+    showScreen('screen-list');
+  } catch(e) {
+    toast('Error al leer el PDF', 'warn');
+    console.error(e);
+  }
+}
+
+function parsePDF(text) {
+  // ── CONFIRMED FORMAT (from console log) ─────────────────────────────
+  // Each store header is its own line:
+  //   "29006 MALAGA CENTRO DE REPARACIONES INFORMATICAS, S.L. (M) // 952363595 // LEDA, 15 //"
+  //   "29006 Málaga (VERACRUZ) GRUPO HRC HOME S.L. // 689284496-638433422 // VERACRUZ 23 POL IND. SAN LUIS08,45-11 //"
+  // Format: CP  CITY+COMPANY  //  PHONE  //  ADDRESS  //
+  //
+  // Doc lines:
+  //   "MASTER ELEC 626WEB042264F 282525 TV XIAOMI 55" A PRO 2026 UHD QLED GOOGLETV DOLBY *29006* 0-1-0 1"
+  // Format: MASTER ELEC  DOCNUM  PRODCODE(6)  NAME  *CP*  BULTOS  QTY
+  //   OR:   MASTER ELEC  DOCNUM  PRODCODE(6)  NAME  BULTOS  QTY   (no *CP*)
+  // ─────────────────────────────────────────────────────────────────────
+
+  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const stopMap   = new Map();
+  const stopOrder = [];
+  let currentKey  = null;
+
+  for (const line of lines) {
+    // ── Store header: starts with 5-digit CP ────────────────────────────
+    // e.g.: "29006 MALAGA CENTRO DE REPARACIONES INFORMATICAS, S.L. (M) // 952363595 // LEDA, 15 //"
+    const hm = line.match(/^(\d{5})\s+(.+?)\s*\/\/\s*([\d]{7,15}(?:[\-\/]\d+)?)\s*\/\/\s*(.+?)\s*\/\/\s*$/);
+    if (hm) {
+      const cp       = hm[1];
+      const nameRaw  = hm[2].trim();   // "MALAGA CENTRO DE REPARACIONES..." or "Málaga (VERACRUZ) GRUPO HRC HOME S.L."
+      const phone    = hm[3].trim().split(/[\-\/]/)[0]; // take first number if dual-phone
+      const address  = hm[4].trim();
+
+      // Split city vs company name
+      // City = first word(s) that are purely a place name
+      // Company starts at the first word that looks like a business name
+      const words = nameRaw.split(/\s+/);
+      let splitAt = 1; // default: first word is city
+
+      for (let i = 1; i < words.length; i++) {
+        const w = words[i];
+        // Known city suffixes that are still part of city name
+        if (/^\(/.test(w)) { splitAt = i + 2; continue; } // "(VERACRUZ)" → include in city
+        // Company-start triggers
+        if (/^(CENTRO|GRUPO|ELECTR|CONSUR|SECONSUR|CHOLLO|SAIL|BEZDADI|ARAUJO|BRAVO|HRC|IMAGEN)/i.test(w)) { splitAt = i; break; }
+        if (words[i-1].endsWith(',')) { splitAt = i; break; } // comma → company starts after
+        if (i >= 2 && /^[A-ZÁÉÍÓÚÑ]{4,}$/.test(w) && !/^(EL|LA|LOS|LAS|DE|DEL|SAN|SANTA)$/.test(w)) { splitAt = i; break; }
+      }
+
+      const city    = words.slice(0, splitAt).join(' ');
+      const company = words.slice(splitAt).join(' ') || nameRaw;
+
+      const key = cp + '_' + phone.replace(/\D/g,'').substring(0,9);
+      if (!stopMap.has(key)) {
+        stopMap.set(key, {
+          id: key, cp, city, company, phone, address,
+          docs: [], albaranSet: new Set(),
+          status: 'pending', incidentType: '', incidentNote: '',
+          photos: [], albaranPhotos: {}
+        });
+        stopOrder.push(key);
+      }
+      currentKey = key;
+      continue;
+    }
+
+    // ── Doc line: MASTER ELEC with 6-digit product code ─────────────────
+    // Real product: "MASTER ELEC 626WEB042264F 282525 TV XIAOMI... *29006* 0-1-0 1"
+    // Also without *CP*: "MASTER ELEC 626WEB042542 240016 SARTEN MONIX M481228 28CM GREEN 0-0-6 6"
+    if (line.startsWith('MASTER ELEC') && currentKey) {
+      // Match: MASTER ELEC  DOCNUM  6DIGIT_CODE  NAME  [*CP*]  BULTOS  QTY
+      const dm = line.match(/^MASTER ELEC\s+(626\w+)\s+(\d{6})\s+(.+?)\s+(?:\*\d{5}\*\s*)?[\d]+-[\d]+-[\d]+\s+(\d+)\s*$/);
+      if (dm) {
+        const stop = stopMap.get(currentKey);
+        const docNum   = dm[1];
+        const prodCode = dm[2];
+        const name     = dm[3].trim();
+        const qty      = parseInt(dm[4]);
+        if (!stop.docs.find(d => d.num === docNum && d.prodCode === prodCode)) {
+          stop.docs.push({ num: docNum, prodCode, name, qty });
+        }
+        stop.albaranSet.add(docNum);
+      }
+    }
+  }
+
+  // ── Finalize ──────────────────────────────────────────────────────────
+  const result = stopOrder.map(k => {
+    const s = stopMap.get(k);
+    s.albaranCount = s.albaranSet.size;
+    delete s.albaranSet;
+    return s;
+  }).filter(s => s.docs.length > 0);
+
+  console.log('[RutaApp] Resultado:', result.length, result.map(s => `${s.company} (${s.cp})`));
+  return result;
+}
+
+// ── FALLBACK PARSER ─────────────────────────────────────────────────────
+// If the main parser finds 0 headers, try a looser approach:
+// split text on *CP* markers and extract store info from surrounding context
+function parsePDFFallback(raw) {
+
+  const stopMap  = new Map();
+  const stopOrder = [];
+
+  // Find all *DDDDD* markers — these mark start of a store's first doc
+  const cpMarkerRegex = /\*(\d{5})\*/g;
+  let m;
+  const markers = [];
+  while ((m = cpMarkerRegex.exec(raw)) !== null) {
+    markers.push({ pos: m.index, cp: m[1] });
+  }
+
+  // Between each marker, extract the store header (COMPANY // PHONE // ADDRESS)
+  // which appears just before the marker in the raw text
+  for (let i = 0; i < markers.length; i++) {
+    const marker = markers[i];
+    const contextStart = Math.max(0, marker.pos - 300);
+    const context = raw.substring(contextStart, marker.pos + 20);
+
+    const hm = context.match(/([A-ZÁÉÍÓÚÑ][^\/]{3,60}?)\s*\/\/\s*([\d\-]{7,15})\s*\/\/\s*([^\/]{3,60}?)\s*\/\//i);
+    if (!hm) continue;
+
+    const company = hm[1].trim();
+    const phone   = hm[2].trim();
+    const address = hm[3].trim();
+    const cp      = marker.cp;
+
+    // City: appears right after address // in the raw text, before the next MASTER ELEC
+    const afterHeader = raw.substring(marker.pos - 50, marker.pos + 100);
+    const cityM = afterHeader.match(/\/\/\s*\d{5}\s+([A-ZÁÉÍÓÚÑ][^\n\*\/]{2,40}?)(?:\s+(?:MASTER|\*|\d{5}))/i);
+    const city = cityM ? cityM[1].trim() : cp;
+
+    const key = cp + '_' + phone.replace(/\D/g,'').substring(0,9);
+    if (!stopMap.has(key)) {
+      stopMap.set(key, {
+        id: key, cp, city, company, phone, address,
+        docs: [], albaranSet: new Set(),
+        status: 'pending', incidentType: '', incidentNote: '', photos: []
+      });
+      stopOrder.push(key);
+    }
+  }
+
+  // Extract docs
+  const docRegex = /MASTER ELEC\s+(626\w+)\s+(\d{5,6})\s+(.+?)\s+(\d{1,3})\s+(?:\*(\d{5})\*\s*)?(\d+-\d+-\d+)/g;
+  while ((m = docRegex.exec(raw)) !== null) {
+    if (m[2].length < 6) continue;
+    const doc = { pos: m.index, docNum: m[1], prodCode: m[2], name: m[3].trim(), qty: parseInt(m[4]), cp: m[5]||null };
+    if (!doc.cp) continue;
+    const candidates = stopOrder.filter(k => stopMap.get(k).cp === doc.cp);
+    if (!candidates.length) continue;
+    let targetKey = candidates[0];
+    if (candidates.length > 1) {
+      let bestKey = null, bestDist = Infinity;
+      for (const k of candidates) {
+        const phone = stopMap.get(k).phone.replace(/\D/g,'').substring(0,9);
+        let sp = 0, p;
+        while ((p = raw.indexOf(phone, sp)) !== -1) {
+          if (p < doc.pos && (doc.pos - p) < bestDist) { bestDist = doc.pos - p; bestKey = k; }
+          sp = p + 1;
+        }
+      }
+      if (bestKey) targetKey = bestKey;
+    }
+    const stop = stopMap.get(targetKey);
+    if (!stop.docs.find(d => d.num === doc.docNum && d.prodCode === doc.prodCode)) {
+      stop.docs.push({ num: doc.docNum, prodCode: doc.prodCode, name: doc.name, qty: doc.qty });
+    }
+    stop.albaranSet.add(doc.docNum);
+  }
+
+  return stopOrder.map(k => {
+    const s = stopMap.get(k);
+    s.albaranCount = s.albaranSet.size;
+    delete s.albaranSet;
+    return s;
+  }).filter(s => s.docs.length > 0);
+}
+
+// ── DEMO DATA ────────────────────────────────────────────────────────
+function loadDemo() {
+  stops = [
+    {
+      id: '29006_MALAGA_CENTRO',
+      cp: '29006', city: 'MÁLAGA', company: 'MÁLAGA CENTRO DE REPARACIONES INFORMÁTICAS, S.L.',
+      phone: '952363595', address: 'LEDA, 15',
+      docs: [
+        { num: '626WEB042264F', prodCode: '282525', name: 'TV XIAOMI 55" A PRO 2026 UHD QLED GOOGLETV DOLBY', qty: 1 },
+        { num: '626WEB042267F', prodCode: '275873', name: 'TV HAIER 65" H65S80EUX UHD QLED GOOGLE TV BT PEANA', qty: 1 },
+      ],
+      status: 'pending', incidentType: '', incidentNote: '', photos: []
+    },
+    {
+      id: '29006_GRUPO_HRC',
+      cp: '29006', city: 'MÁLAGA (VERACRUZ)', company: 'GRUPO HRC HOME S.L.',
+      phone: '689284496', address: 'VERACRUZ 23 POL IND. SAN LUIS',
+      docs: [
+        { num: '626WEB042542', prodCode: '240014', name: 'SARTEN MONIX M481224 24CM GREEN', qty: 6 },
+        { num: '626WEB042542', prodCode: '240016', name: 'SARTEN MONIX M481228 28CM GREEN', qty: 6 },
+        { num: '626WEB042777', prodCode: '282597', name: 'FRI. ARTICA AFEA17783F460I 177x84', qty: 1 },
+        { num: '626WEB042777', prodCode: '249885', name: 'FRI. HOOVER HHSBSO6174XWD 177x90 NF INOX', qty: 1 },
+        { num: '626PEV002442', prodCode: '266070', name: 'HORNO ARTICA AHB7008W MF 70L BLANCO', qty: 1 },
+      ],
+      status: 'pending', incidentType: '', incidentNote: '', photos: []
+    },
+    {
+      id: '29006_SAIL',
+      cp: '29006', city: 'MÁLAGA', company: 'SAIL BEZDADI, WALID',
+      phone: '647348698', address: 'C/ PAQUIROS, 12, A',
+      docs: [
+        { num: '626WEB041522F', prodCode: '284853', name: 'TV SAMSUNG 65" TQ65S85F UHD OLED SMART TV 120HZ', qty: 1 },
+      ],
+      status: 'pending', incidentType: '', incidentNote: '', photos: []
+    },
+    {
+      id: '29120_ELECTROIMAGEN',
+      cp: '29120', city: 'ALHAURÍN EL GRANDE', company: 'ELECTROIMAGEN BRAVO MARIN, S.L.',
+      phone: '952490171', address: 'CRUZ 23',
+      docs: [
+        { num: '626WEB042639', prodCode: '290571', name: 'CIRCULADOR ARTICA AVI120W20 120W 50CM', qty: 1 },
+        { num: '626WEB042639', prodCode: '280648', name: 'ACON.SPLIT DAITSU DS09KTP4 WIFI A++/A+', qty: 4 },
+        { num: '626WEB043198', prodCode: '256242', name: 'MANDO A DISTANCIA DCU PARA AIRE ACONDIC.', qty: 7 },
+      ],
+      status: 'pending', incidentType: '', incidentNote: '', photos: []
+    },
+    {
+      id: '29640_ELECTRICA_ARAUJO',
+      cp: '29640', city: 'LOS BOLICHES', company: 'ELECTRICA ARAUJO, S.A.',
+      phone: '952473110', address: 'CALLE IGLESIA, 16 BIS',
+      docs: [
+        { num: '626WEB040779F', prodCode: '291320', name: 'ALTAVOZ MINI JBL GO 4 BLUETOOTH BLUE', qty: 1 },
+        { num: '626WEB041247F', prodCode: '205591', name: 'TELEFONO SOBREMESA ALCATEL T06 ULTRA SLIM', qty: 1 },
+        { num: '626WEB042371F', prodCode: '283039', name: 'TV SAMSUNG 55" TQ55Q7F5 UHD QLED SMARTTV IA', qty: 1 },
+      ],
+      status: 'pending', incidentType: '', incidentNote: '', photos: []
+    },
+    {
+      id: '29670_SECONSUR',
+      cp: '29670', city: 'SAN PEDRO DE ALCÁNTARA', company: 'SECONSUR DEL SOL, S.L.',
+      phone: '952927495', address: 'AVDA. PABLO RUIZ PICASSO, EDF.FERROMAN LOCAL 3-4',
+      docs: [
+        { num: '626WEB042262F', prodCode: '168369', name: 'CAFET. DELONGHI EN80.B NESPRESSO INISSIA NEGRA', qty: 5 },
+        { num: '626WEB042339F', prodCode: '259504', name: 'FRICOM. HISENSE RB372N4ACE 179x60x59 NF INOX', qty: 1 },
+        { num: '626WEB043157', prodCode: '267123', name: 'FRICOM. HOOVER HOCT3L517EW2 177x55 BLANCO', qty: 1 },
+      ],
+      status: 'pending', incidentType: '', incidentNote: '', photos: []
+    },
+    {
+      id: '29680_ELECTROCHOLLO',
+      cp: '29680', city: 'ESTEPONA', company: 'ELECTROCHOLLO SUR',
+      phone: '951621674', address: 'AVDA ESPAÑA 218-220',
+      docs: [
+        { num: '626PEV002421', prodCode: '267694', name: 'FRI. HISENSE RS818N4TIE1 179x91x73 NF DISP INOX', qty: 1 },
+      ],
+      status: 'pending', incidentType: '', incidentNote: '', photos: []
+    },
+  ];
+  saveState();
+  toast(`${stops.length} entregas cargadas ✓`, 'ok');
+  showScreen('screen-list');
+}
+
+// ── RENDER LIST ──────────────────────────────────────────────────────
+function renderList() {
+  const now = new Date();
+  document.getElementById('list-date').textContent = now.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
+  document.getElementById('list-title').textContent = `${stops.length} entregas`;
+
+  const done = stops.filter(s => s.status === 'done').length;
+  const inc  = stops.filter(s => s.status === 'incident').length;
+  const pend = stops.filter(s => s.status === 'pending').length;
+
+  document.getElementById('list-stats').innerHTML = `
+    <div class="stat-pill"><div class="dot dot-green"></div>${done} entregadas</div>
+    ${inc ? `<div class="stat-pill"><div class="dot dot-amber"></div>${inc} incidencias</div>` : ''}
+    <div class="stat-pill"><div class="dot dot-gray"></div>${pend} pendientes</div>
+  `;
+
+  const scroll = document.getElementById('list-scroll');
+  scroll.innerHTML = stops.map((s, i) => {
+    const icon = s.status === 'done' ? '✅' : s.status === 'incident' ? '⚠️' : '📦';
+    const uniqueDocs = [...new Set(s.docs.map(d => d.num))];
+    const totalQty = s.docs.reduce((a, d) => a + d.qty, 0);
+    return `
+      <div class="stop-card ${s.status}" onclick="openStop(${i})">
+        <div class="stop-top">
+          <div class="stop-num">${i+1}</div>
+          <div class="stop-info">
+            <div class="stop-name">${s.company}</div>
+            <div class="stop-city">${s.cp} — ${s.city}</div>
+            <div class="stop-addr">${s.address}</div>
+          </div>
+          <div class="stop-status">${icon}</div>
+        </div>
+        <div class="stop-docs">
+          ${uniqueDocs.slice(0,4).map(d => `<div class="doc-tag">${d}</div>`).join('')}
+          ${uniqueDocs.length > 4 ? `<div class="doc-tag">+${uniqueDocs.length-4}</div>` : ''}
+        </div>
+        <div class="stop-bultos">${s.albaranCount||uniqueDocs.length} albarán${(s.albaranCount||uniqueDocs.length)!==1?'es':''}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── OPEN STOP ────────────────────────────────────────────────────────
+function openStop(idx) {
+  currentStopIdx = idx;
+  const s = stops[idx];
+  if (!s.albaranPhotos) s.albaranPhotos = {};
+
+  document.getElementById('detail-topbar-title').textContent = `Parada ${idx+1}`;
+  document.getElementById('detail-topbar-badge').textContent = s.cp;
+
+  // Status badge
+  let badgeHtml = '';
+  if (s.status === 'done')          badgeHtml = `<div class="status-badge badge-done">✅ Entregado</div>`;
+  else if (s.status === 'incident') badgeHtml = `<div class="status-badge badge-incident">⚠️ Incidencia</div>`;
+  else                              badgeHtml = `<div class="status-badge badge-pending">📦 Pendiente</div>`;
+
+  // Group products by albaran number
+  const albaranMap = new Map();
+  for (const d of s.docs) {
+    if (!albaranMap.has(d.num)) albaranMap.set(d.num, []);
+    const arr = albaranMap.get(d.num);
+    if (!arr.find(x => x.prodCode === d.prodCode)) arr.push(d);
+  }
+  const albaranNums = [...albaranMap.keys()];
+
+  // Build albaran sections with their own camera button
+  const albaranSectionsHtml = albaranNums.map((num, ai) => {
+    const products = albaranMap.get(num);
+    const photos   = s.albaranPhotos[num] || [];
+    const inputId  = `photo-input-${ai}`;
+    const safeName = num.replace(/[^a-zA-Z0-9]/g, '_');
+
+    const photosHtml = photos.length ? `
+      <div class="photo-preview" style="margin-top:8px">
+        ${photos.map((p, pi) => `
+          <div class="photo-thumb">
+            <img src="${p}" alt="">
+            <button class="photo-thumb-remove" onclick="removePhoto('${num}',${pi})">✕</button>
+          </div>
+        `).join('')}
+      </div>` : '';
+
+    return `
+      <div class="albaran-block">
+        <div class="albaran-header">
+          <div class="albaran-num">${num}</div>
+          <label class="albaran-cam-btn" for="${inputId}">
+            📷 ${photos.length > 0 ? photos.length + ' foto' + (photos.length > 1 ? 's' : '') : 'Foto'}
+          </label>
+          <input type="file" id="${inputId}" accept="image/*" capture="environment"
+            onchange="addPhoto(this,'${num}')" style="display:none">
+        </div>
+        ${photosHtml}
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('detail-scroll').innerHTML = `
+    ${badgeHtml}
+
+    <div class="detail-address-card">
+      <div class="label">Cliente</div>
+      <div class="detail-company">${s.company}</div>
+      <div class="detail-addr-line">📍 ${s.address}</div>
+      <div class="detail-addr-line">📮 ${s.cp} — ${s.city}</div>
+      ${s.phone ? `<a class="detail-phone" href="tel:${s.phone}">📞 ${s.phone}</a>` : ''}
+    </div>
+
+    <div class="docs-section">
+      <div class="section-label">Albaranes (${albaranNums.length})</div>
+      ${albaranSectionsHtml}
+    </div>
+
+    <div class="incident-section ${s.status === 'incident' ? 'open' : ''}" id="incident-section">
+      <div class="section-label">Tipo de incidencia</div>
+      <div class="incident-types">
+        ${['Tienda cerrada','No había nadie','Rechazó mercancía','Falta producto','Dirección incorrecta','Otro'].map(t => `
+          <div class="incident-type ${s.incidentType===t?'selected':''}" onclick="selectIncidentType('${t}')">${t}</div>
+        `).join('')}
+      </div>
+      <textarea class="incident-textarea" id="incident-note" placeholder="Notas adicionales (opcional)…" rows="3">${s.incidentNote||''}</textarea>
+    </div>
+  `;
+
+  // Action bar
+  let actionsHtml = '';
+  if (s.status === 'pending') {
+    actionsHtml = `
+      <button class="btn btn-green" onclick="markDone()">✅ Marcar como entregado</button>
+      <button class="btn btn-amber" onclick="openIncident()">⚠️ Registrar incidencia</button>
+    `;
+  } else if (s.status === 'done') {
+    actionsHtml = `
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="undoStatus()">↩ Deshacer</button>
+        <button class="btn btn-ghost" onclick="showScreen('screen-list')">← Volver</button>
+      </div>
+    `;
+  } else if (s.status === 'incident') {
+    actionsHtml = `
+      <button class="btn btn-amber" onclick="saveIncident()">💾 Guardar incidencia</button>
+      <div class="btn-row" style="margin-top:0">
+        <button class="btn btn-ghost" onclick="undoStatus()">↩ Deshacer</button>
+        <button class="btn btn-ghost" onclick="showScreen('screen-list')">← Volver</button>
+      </div>
+    `;
+  }
+  document.getElementById('detail-actions').innerHTML = actionsHtml;
+
+  showScreen('screen-detail');
+}
+
+// ── ACTIONS ──────────────────────────────────────────────────────────
+function markDone() {
+  stops[currentStopIdx].status = 'done';
+  saveState();
+  toast('Entrega registrada ✓', 'ok');
+  // auto advance to next pending
+  const nextPending = stops.findIndex((s, i) => i > currentStopIdx && s.status === 'pending');
+  if (nextPending !== -1) {
+    setTimeout(() => openStop(nextPending), 600);
+  } else {
+    setTimeout(() => showScreen('screen-list'), 600);
+  }
+}
+
+function openIncident() {
+  stops[currentStopIdx].status = 'incident';
+  document.getElementById('incident-section').classList.add('open');
+  document.getElementById('detail-actions').innerHTML = `
+    <button class="btn btn-amber" onclick="saveIncident()">💾 Guardar incidencia</button>
+    <div class="btn-row" style="margin-top:0">
+      <button class="btn btn-ghost" onclick="undoStatus()">↩ Cancelar</button>
+    </div>
+  `;
+  document.getElementById('incident-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+function selectIncidentType(type) {
+  stops[currentStopIdx].incidentType = type;
+  document.querySelectorAll('.incident-type').forEach(el => {
+    el.classList.toggle('selected', el.textContent === type);
+  });
+}
+
+function saveIncident() {
+  const note = document.getElementById('incident-note')?.value || '';
+  stops[currentStopIdx].incidentNote = note;
+  stops[currentStopIdx].status = 'incident';
+  saveState();
+  toast('Incidencia guardada ⚠️', 'warn');
+  setTimeout(() => showScreen('screen-list'), 600);
+}
+
+function undoStatus() {
+  stops[currentStopIdx].status = 'pending';
+  stops[currentStopIdx].incidentType = '';
+  stops[currentStopIdx].incidentNote = '';
+  saveState();
+  openStop(currentStopIdx);
+}
+
+function addPhoto(input, albaranNum) {
+  if (!input.files.length) return;
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = e => {
+    const s = stops[currentStopIdx];
+    if (!s.albaranPhotos) s.albaranPhotos = {};
+    if (!s.albaranPhotos[albaranNum]) s.albaranPhotos[albaranNum] = [];
+    s.albaranPhotos[albaranNum].push(e.target.result);
+    // Keep backward compat
+    s.photos = Object.values(s.albaranPhotos).flat();
+    saveState();
+    openStop(currentStopIdx);
+    toast('Foto añadida ✓', 'ok');
+  };
+  reader.readAsDataURL(file);
+}
+
+function removePhoto(albaranNum, photoIdx) {
+  const s = stops[currentStopIdx];
+  if (!s.albaranPhotos || !s.albaranPhotos[albaranNum]) return;
+  s.albaranPhotos[albaranNum].splice(photoIdx, 1);
+  s.photos = Object.values(s.albaranPhotos).flat();
+  saveState();
+  openStop(currentStopIdx);
+}
+
+// ── RESUMEN ──────────────────────────────────────────────────────────
+function renderResumen() {
+  const done = stops.filter(s => s.status === 'done').length;
+  const inc  = stops.filter(s => s.status === 'incident').length;
+  const pend = stops.filter(s => s.status === 'pending').length;
+  const totalDocs = stops.reduce((a, s) => a + [...new Set(s.docs.map(d => d.num))].length, 0);
+
+  document.getElementById('resumen-scroll').innerHTML = `
+    <div class="resumen-kpi">
+      <div class="kpi-box green"><div class="num">${done}</div><div class="lbl">Entregadas</div></div>
+      <div class="kpi-box amber"><div class="num">${inc}</div><div class="lbl">Incidencias</div></div>
+      <div class="kpi-box blue"><div class="num">${stops.length}</div><div class="lbl">Total paradas</div></div>
+      <div class="kpi-box gray"><div class="num">${pend}</div><div class="lbl">Pendientes</div></div>
+    </div>
+
+    <div class="section-label" style="margin-bottom:10px">Detalle por parada</div>
+    ${stops.map((s, i) => {
+      const icon = s.status === 'done' ? '✅' : s.status === 'incident' ? '⚠️' : '📦';
+      const stClass = s.status === 'done' ? 'st-ok' : s.status === 'incident' ? 'st-inc' : 'st-pend';
+      const stText  = s.status === 'done' ? 'Entregado' : s.status === 'incident' ? (s.incidentType || 'Incidencia') : 'Pendiente';
+      return `
+        <div class="resumen-list-item">
+          <div class="ico">${icon}</div>
+          <div>
+            <div class="name">${s.company}</div>
+            <div style="font-size:11px;color:var(--text3)">${s.cp} — ${s.city}</div>
+          </div>
+          <div class="st ${stClass}">${stText}</div>
+        </div>
+      `;
+    }).join('')}
+  `;
+}
+
+function exportarResumen() {
+  const now = new Date().toLocaleDateString('es-ES');
+  const done = stops.filter(s => s.status === 'done').length;
+  const inc  = stops.filter(s => s.status === 'incident').length;
+
+  let txt = `RESUMEN DE RUTA — ${now}\n`;
+  txt += `${'='.repeat(40)}\n`;
+  txt += `Entregadas: ${done} | Incidencias: ${inc} | Pendientes: ${stops.filter(s=>s.status==='pending').length}\n\n`;
+
+  stops.forEach((s, i) => {
+    const st = s.status === 'done' ? '✅ ENTREGADO' : s.status === 'incident' ? `⚠️ INCIDENCIA: ${s.incidentType}` : '⏳ PENDIENTE';
+    txt += `${i+1}. ${s.company} (${s.cp})\n`;
+    txt += `   ${st}\n`;
+    if (s.incidentNote) txt += `   Nota: ${s.incidentNote}\n`;
+    txt += '\n';
+  });
+
+  const blob = new Blob([txt], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `ruta_${now.replace(/\//g,'-')}.txt`;
+  a.click();
+  toast('Resumen exportado ✓', 'ok');
+}
+
+// ── RESET ────────────────────────────────────────────────────────────
+function confirmReset() {
+  stops = [];
+  localStorage.removeItem('rutaapp_stops');
+  // Reset file input so same PDF can be re-uploaded
+  const fi = document.querySelector('#screen-upload input[type=file]');
+  if (fi) fi.value = '';
+  showScreen('screen-upload');
+}
+
+// ── PERSISTENCE ──────────────────────────────────────────────────────
+function saveState() {
+  try {
+    // Save without photos to avoid quota issues, photos stay in memory
+    const toSave = stops.map(s => ({...s, photos: []}));
+    localStorage.setItem('rutaapp_stops', JSON.stringify(toSave));
+  } catch(e) {}
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem('rutaapp_stops');
+    if (saved) {
+      stops = JSON.parse(saved);
+      if (stops.length > 0) showScreen('screen-list');
+    }
+  } catch(e) {}
+}
+
+// ── SCAN / IA ────────────────────────────────────────────────────────
+let scanPages = []; // array of base64 images
+
+function openScan() {
+  scanPages = [];
+  document.getElementById('scan-pages').innerHTML = '';
+  document.getElementById('scan-result-msg').innerHTML = '';
+  document.getElementById('scan-process-btn').style.display = 'none';
+  showScreen('screen-scan');
+}
+
+function addScanPage(input) {
+  if (!input.files.length) return;
+  const file = input.files[0];
+  const reader = new FileReader();
+  reader.onload = e => {
+    const b64 = e.target.result; // data:image/jpeg;base64,...
+    scanPages.push(b64);
+    renderScanPages();
+    input.value = '';
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeScanPage(idx) {
+  scanPages.splice(idx, 1);
+  renderScanPages();
+}
+
+function renderScanPages() {
+  const container = document.getElementById('scan-pages');
+  container.innerHTML = scanPages.map((b64, i) => `
+    <div class="scan-page-card">
+      <img src="${b64}" alt="Página ${i+1}">
+      <div class="scan-page-label">
+        <span>Página ${i+1}</span>
+        <button class="scan-page-remove" onclick="removeScanPage(${i})">✕</button>
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('scan-process-btn').style.display = scanPages.length > 0 ? 'block' : 'none';
+}
+
+async function processScan() {
+  if (scanPages.length === 0) return;
+
+  const btn = document.getElementById('scan-process-btn');
+  btn.textContent = '⏳ Analizando…';
+  btn.disabled = true;
+  document.getElementById('scan-result-msg').innerHTML = '';
+
+  try {
+    // Build message content: one image per page + instruction
+    const imageContent = scanPages.map(b64 => ({
+      type: 'image',
+      source: {
+        type: 'base64',
+        media_type: b64.startsWith('data:image/png') ? 'image/png' : 'image/jpeg',
+        data: b64.split(',')[1]
+      }
+    }));
+
+    const prompt = `Eres un asistente que extrae datos de albaranes y hojas de ruta de reparto de electrodomésticos de la empresa MASTER ELEC / MASTER CADENA.
+
+Analiza todas las imágenes y extrae CADA entrega/tienda/cliente que encuentres.
+
+Para CADA entrega devuelve un objeto con:
+- company: nombre de la empresa o cliente
+- address: dirección completa
+- cp: código postal (5 dígitos)
+- city: ciudad/localidad
+- phone: teléfono (si aparece, si no "")
+- albaran: número de albarán o factura (ej: 626WEB042264F, 626R0016314)
+- products: array de strings con los productos (descripción breve)
+
+Devuelve SOLO un array JSON válido, sin texto adicional, sin markdown, sin explicaciones.
+Ejemplo: [{"company":"ELECTRICA ARAUJO S.A.","address":"CALLE IGLESIA 16 BIS","cp":"29640","city":"LOS BOLICHES","phone":"952473110","albaran":"626WEB040779F","products":["ALTAVOZ JBL GO 4 BLUETOOTH"]}]
+
+Si hay varias páginas, combina todos los datos en un solo array.
+Si una tienda tiene varios albaranes en páginas distintas, crea una entrada por albarán.`;
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2000,
+        messages: [{
+          role: 'user',
+          content: [...imageContent, { type: 'text', text: prompt }]
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const rawText = data.content.map(c => c.text || '').join('').trim();
+
+    // Parse JSON response
+    const clean = rawText.replace(/^```json|^```|```$/gm, '').trim();
+    let extracted;
+    try { extracted = JSON.parse(clean); }
+    catch(e) {
+      showScanResult('No se pudo leer la respuesta de la IA. Inténtalo de nuevo.', 'warn');
+      return;
+    }
+
+    if (!Array.isArray(extracted) || extracted.length === 0) {
+      showScanResult('La IA no encontró entregas en las imágenes.', 'warn');
+      return;
+    }
+
+    // ── Merge: only add what's new ──────────────────────────────────
+    let added = 0, skipped = 0;
+
+    for (const item of extracted) {
+      const albaran = (item.albaran || '').trim();
+      const company = (item.company || '').trim();
+      if (!company) continue;
+
+      // Check if this albaran already exists in any stop
+      const albaranExists = albaran && stops.some(s =>
+        s.docs && s.docs.some(d => d.num === albaran)
+      );
+
+      if (albaranExists) { skipped++; continue; }
+
+      // Check if this company already exists (by name similarity or CP)
+      const cp = (item.cp || '').trim();
+      const existingStop = stops.find(s =>
+        s.company.toLowerCase().includes(company.toLowerCase().substring(0, 8)) ||
+        (cp && s.cp === cp && s.company.toLowerCase().includes(company.toLowerCase().substring(0, 5)))
+      );
+
+      const newDoc = albaran ? [{
+        num: albaran,
+        prodCode: '000000',
+        name: (item.products || []).join(', ') || 'Ver albarán físico',
+        qty: 1
+      }] : [];
+
+      if (existingStop) {
+        // Add albaran to existing stop
+        if (albaran && !existingStop.docs.find(d => d.num === albaran)) {
+          existingStop.docs.push(...newDoc);
+          existingStop.albaranCount = (existingStop.albaranCount || 0) + 1;
+          added++;
+        } else {
+          skipped++;
+        }
+      } else {
+        // New stop entirely
+        stops.push({
+          id: `scan_${Date.now()}_${added}`,
+          cp, city: item.city || '', company,
+          phone: item.phone || '', address: item.address || '',
+          docs: newDoc,
+          albaranCount: newDoc.length,
+          status: 'pending', incidentType: '', incidentNote: '',
+          photos: [], albaranPhotos: {}
+        });
+        added++;
+      }
+    }
+
+    saveState();
+
+    if (added > 0) {
+      showScanResult(`✅ ${added} entrega${added > 1 ? 's' : ''} nueva${added > 1 ? 's' : ''} añadida${added > 1 ? 's' : ''}${skipped > 0 ? ` · ${skipped} ya existían` : ''}`, 'ok');
+      setTimeout(() => showScreen('screen-list'), 2000);
+    } else {
+      showScanResult(`Todo ya estaba en la ruta (${skipped} encontradas, ninguna nueva).`, 'warn');
+    }
+
+  } catch(e) {
+    showScanResult('Error al conectar con la IA. Comprueba tu conexión.', 'warn');
+    console.error(e);
+  } finally {
+    btn.textContent = '✨ Procesar con IA';
+    btn.disabled = false;
+  }
+}
+
+function showScanResult(msg, type) {
+  const el = document.getElementById('scan-result-msg');
+  el.innerHTML = `<div class="scan-result ${type}">${msg}</div>`;
+}
+
+// ── DRAG & DROP ──────────────────────────────────────────────────────
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+zone.addEventListener('drop', e => {
+  e.preventDefault(); zone.classList.remove('drag');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') {
+    const fakeInput = { files: [file] };
+    loadPDF(fakeInput);
+  }
+});
+
+// ── INIT ─────────────────────────────────────────────────────────────
+loadState();
+</script>
+</body>
+</html>
