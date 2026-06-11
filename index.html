@@ -8,17 +8,20 @@
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
   :root {
-    --bg:       #0F1419;
-    --surface:  #1A2332;
-    --surface2: #243044;
-    --border:   #2E3D52;
-    --accent:   #2563EB;
-    --green:    #10B981;
-    --amber:    #F59E0B;
-    --red:      #EF4444;
-    --text:     #F0F4F8;
-    --text2:    #8899AA;
-    --text3:    #556677;
+    --bg:       #0D1117;
+    --surface:  #161B22;
+    --surface2: #1E2530;
+    --border:   #2A3441;
+    --accent:   #00C853;
+    --accent2:  #00E676;
+    --green:    #00C853;
+    --amber:    #FFB300;
+    --red:      #FF4444;
+    --blue:     #2979FF;
+    --purple:   #AA00FF;
+    --text:     #E6EDF3;
+    --text2:    #7D8B9A;
+    --text3:    #4A5568;
     --radius:   12px;
   }
 
@@ -138,7 +141,7 @@
   }
 
   .stop-docs {
-    padding: 0 14px 12px 52px;
+    padding: 0 14px 8px 52px;
     display: flex; flex-wrap: wrap; gap: 6px;
   }
   .doc-tag {
@@ -147,9 +150,20 @@
     color: var(--text2); font-family: monospace;
   }
   .stop-bultos {
-    padding: 0 14px 12px 52px;
+    padding: 0 14px 8px 52px;
     font-size: 11px; color: var(--text3);
   }
+  .stop-card-actions {
+    padding: 0 12px 10px 12px;
+    display: flex; justify-content: flex-end;
+  }
+  .btn-delete-stop {
+    background: none; border: 1px solid var(--border);
+    border-radius: 7px; padding: 5px 10px;
+    font-size: 11px; font-weight: 600; color: var(--red);
+    cursor: pointer;
+  }
+  .btn-delete-stop:active { background: #2a1515; }
 
   /* ── DETAIL SCREEN ── */
   #screen-detail { }
@@ -169,6 +183,15 @@
     font-size: 13px; font-weight: 600; color: var(--accent);
     text-decoration: none;
   }
+  .btn-maps {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    margin-top: 10px; background: var(--surface2);
+    border: 1px solid var(--accent); border-radius: 8px; padding: 10px 14px;
+    font-size: 13px; font-weight: 700; color: var(--accent);
+    text-decoration: none; cursor: pointer; width: 100%;
+    transition: background .15s;
+  }
+  .btn-maps:active { background: #0d2a1a; }
 
   .docs-section { margin-bottom: 16px; }
   .section-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px; }
@@ -366,6 +389,18 @@
   .scan-result.ok  { border-color: var(--green); color: var(--green); }
   .scan-result.warn { border-color: var(--amber); color: var(--amber); }
 
+  /* ── MODAL MOTIVOS ── */
+  .motivo-chip {
+    background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 20px; padding: 6px 12px;
+    font-size: 12px; font-weight: 600; color: var(--text2);
+    cursor: pointer; transition: all .15s;
+  }
+  .motivo-chip.selected {
+    border-color: var(--red); color: var(--red);
+    background: rgba(255,68,68,.1);
+  }
+
   /* scrollbar */
   ::-webkit-scrollbar { width: 3px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -400,8 +435,8 @@
   <div class="list-scroll" id="list-scroll"></div>
   <div style="padding:12px 12px 16px; background:var(--surface); border-top:1px solid var(--border); display:flex; gap:8px;">
     <button class="btn btn-ghost" style="flex:1" onclick="showScreen('screen-resumen')">📊 Resumen</button>
-    <button class="btn btn-ghost" style="flex:1; color:var(--green);" onclick="openScan()">📷 Escanear</button>
-    <button class="btn btn-ghost" style="flex:1; color:var(--red);" onclick="confirmReset()">📄 Nuevo PDF</button>
+    <button class="btn btn-ghost" style="flex:1; color:var(--accent);" onclick="openScan()">➕ Añadir</button>
+    <button class="btn btn-ghost" style="flex:1; color:var(--red);" onclick="openGestionar()">🗑 Gestionar</button>
   </div>
 </div>
 
@@ -409,26 +444,105 @@
 <div class="screen" id="screen-scan">
   <div class="topbar">
     <button class="topbar-back" onclick="showScreen('screen-list')">←</button>
-    <div class="topbar-title">Escanear papel</div>
+    <div class="topbar-title">Añadir tienda</div>
   </div>
-  <div class="scan-header">
-    <div style="font-size:13px; color:var(--text2); line-height:1.5;">
-      Haz foto a cada página del papel físico.<br>
-      La IA detectará tiendas y albaranes nuevos y los añadirá sin duplicar.
-    </div>
-  </div>
-  <div class="scan-pages" id="scan-pages">
+  <div class="detail-scroll" id="scan-pages" style="padding:16px; display:flex; flex-direction:column; gap:10px;">
     <!-- páginas escaneadas -->
   </div>
   <div id="scan-result-msg"></div>
-  <div style="padding:12px 12px 16px; display:flex; flex-direction:column; gap:8px;">
-    <label style="display:flex; align-items:center; justify-content:center; gap:8px; background:var(--surface); border:2px dashed var(--border); border-radius:10px; padding:14px; font-size:14px; font-weight:600; color:var(--text2); cursor:pointer;">
+  <div style="padding:12px 16px 16px; display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--border); background:var(--surface);">
+    <label style="display:flex; align-items:center; justify-content:center; gap:8px; background:var(--surface2); border:1.5px dashed var(--border); border-radius:10px; padding:13px; font-size:14px; font-weight:600; color:var(--text2); cursor:pointer;">
       <input type="file" accept="image/*" capture="environment" onchange="addScanPage(this)" style="display:none">
-      📷 Añadir página
+      📷 Escanear albarán físico
     </label>
-    <button class="btn btn-green" id="scan-process-btn" onclick="processScan()" style="display:none">
+    <button id="scan-process-btn" class="btn btn-green" onclick="processScan()" style="display:none">
       ✨ Procesar con IA
     </button>
+    <div style="text-align:center; font-size:12px; color:var(--text3); margin: 2px 0;">— o añadir manualmente —</div>
+    <button class="btn btn-ghost" onclick="openManualAdd()">✏️ Añadir a mano</button>
+  </div>
+</div>
+
+<!-- ════════════ MANUAL ADD SCREEN ════════════ -->
+<div class="screen" id="screen-manual">
+  <div class="topbar">
+    <button class="topbar-back" onclick="showScreen('screen-scan')">←</button>
+    <div class="topbar-title">Nueva parada</div>
+  </div>
+  <div class="detail-scroll" style="padding:16px; display:flex; flex-direction:column; gap:12px;">
+    <div>
+      <div class="section-label" style="margin-bottom:6px">Empresa / Cliente *</div>
+      <input id="manual-company" type="text" placeholder="Nombre de la tienda o cliente"
+        style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; color:var(--text); font-family:inherit; font-size:14px;">
+    </div>
+    <div>
+      <div class="section-label" style="margin-bottom:6px">Dirección</div>
+      <input id="manual-address" type="text" placeholder="Calle y número"
+        style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; color:var(--text); font-family:inherit; font-size:14px;">
+    </div>
+    <div style="display:flex; gap:8px;">
+      <div style="flex:0 0 90px;">
+        <div class="section-label" style="margin-bottom:6px">CP</div>
+        <input id="manual-cp" type="text" inputmode="numeric" maxlength="5" placeholder="29000"
+          style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; color:var(--text); font-family:inherit; font-size:14px;">
+      </div>
+      <div style="flex:1;">
+        <div class="section-label" style="margin-bottom:6px">Ciudad</div>
+        <input id="manual-city" type="text" placeholder="Málaga"
+          style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; color:var(--text); font-family:inherit; font-size:14px;">
+      </div>
+    </div>
+    <div>
+      <div class="section-label" style="margin-bottom:6px">Teléfono</div>
+      <input id="manual-phone" type="tel" placeholder="600000000"
+        style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; color:var(--text); font-family:inherit; font-size:14px;">
+    </div>
+    <div>
+      <div class="section-label" style="margin-bottom:6px">Nº Albarán</div>
+      <input id="manual-albaran" type="text" placeholder="626WEB000000 (opcional)"
+        style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; color:var(--text); font-family:inherit; font-size:14px;">
+    </div>
+  </div>
+  <div style="padding:12px 16px 16px; background:var(--surface); border-top:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
+    <button class="btn btn-green" onclick="saveManualStop()">✅ Añadir parada</button>
+  </div>
+</div>
+
+<!-- ════════════ GESTIONAR SCREEN ════════════ -->
+<div class="screen" id="screen-gestionar">
+  <div class="topbar">
+    <button class="topbar-back" onclick="showScreen('screen-list')">←</button>
+    <div class="topbar-title">Gestionar paradas</div>
+  </div>
+  <div style="padding:12px 16px 8px; font-size:13px; color:var(--text2);">
+    Toca una parada para eliminarla de la ruta de hoy.
+  </div>
+  <div class="list-scroll" id="gestionar-list"></div>
+  <div style="padding:12px 16px 16px; background:var(--surface); border-top:1px solid var(--border);">
+    <button class="btn btn-ghost" style="color:var(--red);" onclick="confirmReset()">📄 Cargar nuevo PDF</button>
+  </div>
+</div>
+
+<!-- ════════════ MODAL BORRAR ════════════ -->
+<div id="modal-delete" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:100; align-items:flex-end; justify-content:center;">
+  <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px 16px 0 0; padding:20px 20px 32px; width:100%; max-width:480px;">
+    <div style="font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px;">Eliminar parada</div>
+    <div id="modal-delete-name" style="font-size:17px; font-weight:800; margin-bottom:4px;"></div>
+    <div id="modal-delete-city" style="font-size:13px; color:var(--text2); margin-bottom:16px;"></div>
+
+    <div style="font-size:12px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.6px; margin-bottom:8px;">Motivo de eliminación</div>
+    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;" id="modal-motivos">
+      ${['No cabe en el camión','Cliente canceló','Dirección incorrecta','Ya entregado antes','Fuera de ruta','Otro'].map(m =>
+        `<div class="motivo-chip" onclick="selectMotivo(this)" data-motivo="${m}">${m}</div>`
+      ).join('')}
+    </div>
+    <textarea id="modal-nota" placeholder="Nota adicional (opcional)…" rows="2"
+      style="width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px; color:var(--text); font-family:inherit; font-size:13px; resize:none; margin-bottom:14px;"></textarea>
+
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="closeDeleteModal()">Cancelar</button>
+      <button class="btn" id="modal-confirm-btn" style="flex:1; background:var(--red); color:#fff;" onclick="confirmDeleteStop()">🗑 Eliminar</button>
+    </div>
   </div>
 </div>
 
@@ -844,6 +958,74 @@ function renderList() {
   }).join('');
 }
 
+let deleteTargetIdx = null;
+
+function openGestionar() {
+  const list = document.getElementById('gestionar-list');
+  list.innerHTML = stops.map((s, i) => {
+    const icon = s.status === 'done' ? '✅' : s.status === 'incident' ? '⚠️' : '📦';
+    const uniqueDocs = [...new Set(s.docs.map(d => d.num))];
+    return `
+      <div class="stop-card" onclick="openDeleteModal(${i})" style="cursor:pointer;">
+        <div class="stop-top">
+          <div class="stop-num" style="background:var(--surface2); color:var(--text2);">${i+1}</div>
+          <div class="stop-info">
+            <div class="stop-name">${s.company}</div>
+            <div class="stop-city">${s.cp} — ${s.city}</div>
+            <div class="stop-addr">${s.address}</div>
+          </div>
+          <div style="font-size:18px;">${icon}</div>
+        </div>
+        <div class="stop-docs">
+          ${uniqueDocs.slice(0,3).map(d => `<div class="doc-tag">${d}</div>`).join('')}
+          ${uniqueDocs.length > 3 ? `<div class="doc-tag">+${uniqueDocs.length-3}</div>` : ''}
+        </div>
+        <div class="stop-bultos" style="color:var(--red); font-weight:600;">Toca para eliminar →</div>
+      </div>
+    `;
+  }).join('') || '<div style="padding:32px; text-align:center; color:var(--text3);">No hay paradas cargadas</div>';
+  showScreen('screen-gestionar');
+}
+
+function openDeleteModal(idx) {
+  deleteTargetIdx = idx;
+  const s = stops[idx];
+  document.getElementById('modal-delete-name').textContent = s.company;
+  document.getElementById('modal-delete-city').textContent = `${s.cp} — ${s.city}`;
+  document.getElementById('modal-nota').value = '';
+  // Reset chips
+  document.querySelectorAll('.motivo-chip').forEach(c => c.classList.remove('selected'));
+  const modal = document.getElementById('modal-delete');
+  modal.style.display = 'flex';
+}
+
+function selectMotivo(chip) {
+  document.querySelectorAll('.motivo-chip').forEach(c => c.classList.remove('selected'));
+  chip.classList.add('selected');
+}
+
+function closeDeleteModal() {
+  document.getElementById('modal-delete').style.display = 'none';
+  deleteTargetIdx = null;
+}
+
+function confirmDeleteStop() {
+  if (deleteTargetIdx === null) return;
+  const motivo = document.querySelector('.motivo-chip.selected')?.dataset?.motivo || '';
+  const nota   = document.getElementById('modal-nota').value.trim();
+  if (!motivo) { toast('Selecciona un motivo', 'warn'); return; }
+
+  const s = stops[deleteTargetIdx];
+  // Log the deletion reason (could save to history later)
+  console.info(`[RutaApp] Parada eliminada: ${s.company} | Motivo: ${motivo}${nota ? ' — ' + nota : ''}`);
+
+  stops.splice(deleteTargetIdx, 1);
+  saveState();
+  closeDeleteModal();
+  toast(`"${s.company}" eliminada`, 'ok');
+  openGestionar(); // refresh the list
+}
+
 // ── OPEN STOP ────────────────────────────────────────────────────────
 function openStop(idx) {
   currentStopIdx = idx;
@@ -909,6 +1091,10 @@ function openStop(idx) {
       <div class="detail-addr-line">📍 ${s.address}</div>
       <div class="detail-addr-line">📮 ${s.cp} — ${s.city}</div>
       ${s.phone ? `<a class="detail-phone" href="tel:${s.phone}">📞 ${s.phone}</a>` : ''}
+      ${(s.address || s.city) ? `
+        <a class="btn-maps" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((s.address + ' ' + s.cp + ' ' + s.city).trim())}" target="_blank">
+          🗺 Ir aquí — Google Maps
+        </a>` : ''}
     </div>
 
     <div class="docs-section">
@@ -1120,6 +1306,44 @@ function loadState() {
   } catch(e) {}
 }
 
+function openManualAdd() {
+  // Clear fields
+  ['company','address','cp','city','phone','albaran'].forEach(f => {
+    const el = document.getElementById('manual-' + f);
+    if (el) el.value = '';
+  });
+  showScreen('screen-manual');
+}
+
+function saveManualStop() {
+  const company = document.getElementById('manual-company').value.trim();
+  if (!company) { toast('El nombre es obligatorio', 'warn'); return; }
+
+  const address = document.getElementById('manual-address').value.trim();
+  const cp      = document.getElementById('manual-cp').value.trim();
+  const city    = document.getElementById('manual-city').value.trim();
+  const phone   = document.getElementById('manual-phone').value.trim();
+  const albaran = document.getElementById('manual-albaran').value.trim();
+
+  const newDoc = albaran ? [{
+    num: albaran, prodCode: '000000',
+    name: 'Ver albarán físico', qty: 1
+  }] : [];
+
+  stops.push({
+    id: `manual_${Date.now()}`,
+    cp, city, company, phone, address,
+    docs: newDoc,
+    albaranCount: newDoc.length,
+    status: 'pending', incidentType: '', incidentNote: '',
+    photos: [], albaranPhotos: {}
+  });
+
+  saveState();
+  toast(`${company} añadida ✓`, 'ok');
+  showScreen('screen-list');
+}
+
 // ── SCAN / IA ────────────────────────────────────────────────────────
 let scanPages = []; // array of base64 images
 
@@ -1172,24 +1396,29 @@ async function processScan() {
   document.getElementById('scan-result-msg').innerHTML = '';
 
   try {
-    const prompt = `Eres un asistente que extrae datos de albaranes y hojas de ruta de reparto de electrodomésticos de la empresa MASTER ELEC / MASTER CADENA.
+    const prompt = `Eres un asistente que extrae datos de albaranes de reparto de electrodomésticos (MASTER ELEC, MASTER CADENA, DISSER, etc.).
 
-Analiza todas las imágenes y extrae CADA entrega/tienda/cliente que encuentres.
+Analiza todas las imágenes y extrae CADA entrega/cliente que encuentres.
+
+REGLAS IMPORTANTES para la dirección:
+1. Si en el albarán aparece "ENVIO:" o "ENVÍO:" — usa SIEMPRE esa dirección como dirección de entrega. Es la dirección física donde hay que entregar.
+2. Si NO aparece "ENVIO:", usa la dirección que aparece en la parte derecha del albarán (datos del cliente/destinatario).
+3. NUNCA uses la dirección del remitente (esquina superior izquierda, que es la del almacén o empresa emisora).
 
 Para CADA entrega devuelve un objeto con:
-- company: nombre de la empresa o cliente
-- address: dirección completa
-- cp: código postal (5 dígitos)
-- city: ciudad/localidad
-- phone: teléfono (si aparece, si no "")
-- albaran: número de albarán o factura (ej: 626WEB042264F, 626R0016314)
+- company: nombre del destinatario real (el que aparece junto a ENVIO, o el nombre del cliente derecha)
+- address: dirección de entrega (de ENVIO si existe, si no la del cliente)
+- cp: código postal de la dirección de entrega (5 dígitos)
+- city: ciudad de la dirección de entrega
+- phone: teléfono del destinatario (si aparece, si no "")
+- albaran: número de albarán o factura (ej: 626WEB042264F, 626R0016314, 026R0157268)
 - products: array de strings con los productos (descripción breve)
 
 Devuelve SOLO un array JSON válido, sin texto adicional, sin markdown, sin explicaciones.
-Ejemplo: [{"company":"ELECTRICA ARAUJO S.A.","address":"CALLE IGLESIA 16 BIS","cp":"29640","city":"LOS BOLICHES","phone":"952473110","albaran":"626WEB040779F","products":["ALTAVOZ JBL GO 4 BLUETOOTH"]}]
+Ejemplo: [{"company":"Francisco Javier Márquez Flores","address":"Urb. Vistalmar Duquesa Sur Bloque 3 Puerta 19J","cp":"29692","city":"MANILVA","phone":"609223361","albaran":"026R0157268","products":["TV LED EVO MINI"]}]
 
 Si hay varias páginas, combina todos los datos en un solo array.
-Si una tienda tiene varios albaranes en páginas distintas, crea una entrada por albarán.`;
+Si una página tiene varios albaranes, crea una entrada por albarán.`;
 
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
