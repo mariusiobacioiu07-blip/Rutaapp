@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>RutaApp — Entregas del día</title>
+<link rel="manifest" href="data:application/json,{%22name%22:%22RutaApp%22,%22short_name%22:%22RutaApp%22,%22display%22:%22standalone%22,%22background_color%22:%22%230D1117%22,%22theme_color%22:%22%2300C853%22,%22icons%22:[{%22src%22:%22https://cdn.jsdelivr.net/npm/emoji-datasource-apple@15.0.1/img/apple/64/1f69a.png%22,%22sizes%22:%2264x64%22,%22type%22:%22image/png%22}]}">
+<meta name="theme-color" content="#00C853">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RutaApp">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
@@ -401,6 +407,59 @@
     background: rgba(255,68,68,.1);
   }
 
+  /* ── DRAG HANDLE ── */
+  .drag-handle {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; flex-shrink: 0; cursor: grab; color: var(--text3);
+    font-size: 16px; padding: 4px 0; touch-action: none;
+  }
+  .drag-handle:active { cursor: grabbing; }
+  .stop-card.dragging { opacity: .5; border-color: var(--accent); background: var(--surface2); }
+  .stop-card.drag-over { border-color: var(--accent); border-style: dashed; }
+
+  /* ── SEARCH BAR ── */
+  .search-bar {
+    padding: 10px 12px 6px; background: var(--surface);
+    border-bottom: 1px solid var(--border); flex-shrink: 0;
+  }
+  .search-input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 9px 14px 9px 36px; font-family: 'Inter', sans-serif;
+    font-size: 14px; color: var(--text); outline: none;
+    transition: border-color .15s; position: relative;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .search-wrap { position: relative; }
+  .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 15px; pointer-events: none; }
+
+  /* ── NOTE SECTION ── */
+  .note-textarea {
+    width: 100%; background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 10px; padding: 10px 12px; font-family: 'Inter', sans-serif;
+    font-size: 13px; color: var(--text); resize: none; outline: none;
+    transition: border-color .15s; min-height: 64px;
+  }
+  .note-textarea:focus { border-color: var(--blue); }
+
+  /* ── SIGNATURE ── */
+  .sig-canvas {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+    background: #1a1f2a; display: block; touch-action: none; cursor: crosshair;
+  }
+
+  /* ── TIME BADGE on card ── */
+  .stop-time-badge {
+    font-size: 10px; font-weight: 700; color: var(--green);
+    background: #0d3d2a; border-radius: 4px; padding: 1px 5px;
+    display: inline-block; margin-left: 4px; vertical-align: middle;
+  }
+
+  /* ── CALL QUICK BTN on card ── */
+  .stop-call-btn {
+    background: none; border: none; font-size: 18px; padding: 4px 6px;
+    cursor: pointer; flex-shrink: 0; line-height: 1;
+  }
+
   /* scrollbar */
   ::-webkit-scrollbar { width: 3px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -490,6 +549,12 @@
     </div>
     <div class="list-title" id="list-title">Entregas del día</div>
     <div class="list-stats" id="list-stats"></div>
+  </div>
+  <div class="search-bar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="search-input" type="text" placeholder="Buscar tienda o CP…" oninput="filterList(this.value)">
+    </div>
   </div>
   <div class="list-scroll" id="list-scroll"></div>
   <div style="padding:12px 12px 6px; background:var(--surface); border-top:1px solid var(--border); display:flex; gap:8px;">
@@ -688,6 +753,15 @@
   </div>
 </div>
 
+<!-- ════════════ HISTORIAL DETAIL SCREEN ════════════ -->
+<div class="screen" id="screen-historial-detail">
+  <div class="topbar">
+    <button class="topbar-back" onclick="showScreen('screen-historial')">←</button>
+    <div class="topbar-title" id="hd-title">Detalle ruta</div>
+  </div>
+  <div class="resumen-scroll" id="hd-content"></div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -706,6 +780,7 @@ function showScreen(id) {
   if (id === 'screen-menu') updateMenu();
   if (id === 'screen-list') renderList();
   if (id === 'screen-resumen') renderResumen();
+  if (id === 'screen-detail') setTimeout(initSig, 50);
 }
 
 // ── TOAST ────────────────────────────────────────────────────────────
@@ -1055,30 +1130,39 @@ function renderList() {
   `;
 
   const scroll = document.getElementById('list-scroll');
+  const query = (document.getElementById('search-input')?.value || '').toLowerCase();
   scroll.innerHTML = stops.map((s, i) => {
+    if (query && !s.company.toLowerCase().includes(query) && !s.cp.includes(query) && !s.city.toLowerCase().includes(query)) return '';
     const icon = s.status === 'done' ? '✅' : s.status === 'incident' ? '⚠️' : '📦';
     const uniqueDocs = [...new Set(s.docs.map(d => d.num))];
-    const totalQty = s.docs.reduce((a, d) => a + d.qty, 0);
+    const timeBadge = s.deliveredAt ? `<span class="stop-time-badge">${s.deliveredAt}</span>` : '';
     return `
-      <div class="stop-card ${s.status}" onclick="openStop(${i})">
+      <div class="stop-card ${s.status}" id="stop-card-${i}" draggable="true"
+           ondragstart="dragStart(event,${i})" ondragover="dragOver(event,${i})" ondrop="dragDrop(event,${i})" ondragend="dragEnd(event)">
         <div class="stop-top">
+          <div class="drag-handle" title="Arrastrar para reordenar">⠿</div>
           <div class="stop-num">${i+1}</div>
-          <div class="stop-info">
-            <div class="stop-name">${s.company}</div>
+          <div class="stop-info" onclick="openStop(${i})" style="cursor:pointer;">
+            <div class="stop-name">${s.company}${timeBadge}</div>
             <div class="stop-city">${s.cp} — ${s.city}</div>
             <div class="stop-addr">${s.address}</div>
           </div>
-          <div class="stop-status">${icon}</div>
+          <div style="display:flex; align-items:center; gap:2px; flex-shrink:0;">
+            ${s.phone ? `<a class="stop-call-btn" href="tel:${s.phone}" onclick="event.stopPropagation()" title="Llamar">📞</a>` : ''}
+            <div class="stop-status" onclick="openStop(${i})" style="cursor:pointer;">${icon}</div>
+          </div>
         </div>
-        <div class="stop-docs">
+        <div class="stop-docs" onclick="openStop(${i})" style="cursor:pointer;">
           ${uniqueDocs.slice(0,4).map(d => `<div class="doc-tag">${d}</div>`).join('')}
           ${uniqueDocs.length > 4 ? `<div class="doc-tag">+${uniqueDocs.length-4}</div>` : ''}
         </div>
-        <div class="stop-bultos">${s.albaranCount||uniqueDocs.length} albarán${(s.albaranCount||uniqueDocs.length)!==1?'es':''}</div>
+        <div class="stop-bultos" onclick="openStop(${i})" style="cursor:pointer;">${s.albaranCount||uniqueDocs.length} albarán${(s.albaranCount||uniqueDocs.length)!==1?'es':''}</div>
       </div>
     `;
   }).join('');
 }
+
+function filterList(q) { renderList(); }
 
 const MOTIVOS = [
   'No se ha cargado/facturado',
@@ -1254,6 +1338,20 @@ function openStop(idx) {
       </div>
       <textarea class="incident-textarea" id="incident-note" placeholder="Notas adicionales (opcional)…" rows="3">${s.incidentNote||''}</textarea>
     </div>
+
+    <div class="docs-section">
+      <div class="section-label">📝 Nota de la parada</div>
+      <textarea class="note-textarea" id="stop-note" placeholder="Observaciones, instrucciones de entrega…" rows="3" onchange="saveNote(this.value)">${s.note||''}</textarea>
+    </div>
+
+    <div class="docs-section" id="sig-section">
+      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>✍️ Firma del cliente</span>
+        <button onclick="clearSig()" style="background:none;border:none;color:var(--text3);font-size:11px;font-weight:600;cursor:pointer;">Borrar</button>
+      </div>
+      <canvas class="sig-canvas" id="sig-canvas" height="140"></canvas>
+      ${s.signature ? '<div style="font-size:11px;color:var(--green);margin-top:6px;">✅ Firma guardada</div>' : '<div style="font-size:11px;color:var(--text3);margin-top:6px;">Dibuja la firma del cliente</div>'}
+    </div>
   `;
 
   // Action bar
@@ -1302,9 +1400,12 @@ function markDone() {
     if (firstPhoto) firstPhoto.scrollIntoView({ behavior: 'smooth', block: 'center' });
     return;
   }
+  const now = new Date();
   stops[currentStopIdx].status = 'done';
+  stops[currentStopIdx].deliveredAt = now.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
   saveState();
   toast('Entrega registrada ✓', 'ok');
+  if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
   // auto advance to next pending
   const nextPending = stops.findIndex((s, i) => i > currentStopIdx && s.status === 'pending');
   if (nextPending !== -1) {
@@ -1418,28 +1519,53 @@ function renderResumen() {
 }
 
 function exportarResumen() {
-  const now = new Date().toLocaleDateString('es-ES');
-  const done = stops.filter(s => s.status === 'done').length;
-  const inc  = stops.filter(s => s.status === 'incident').length;
+  const now = new Date();
+  const fecha = now.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const hora  = now.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+  const done  = stops.filter(s => s.status === 'done').length;
+  const inc   = stops.filter(s => s.status === 'incident').length;
+  const pend  = stops.filter(s => s.status === 'pending').length;
+  const nombre = routeName || 'Ruta';
 
-  let txt = `RESUMEN DE RUTA — ${now}\n`;
-  txt += `${'='.repeat(40)}\n`;
-  txt += `Entregadas: ${done} | Incidencias: ${inc} | Pendientes: ${stops.filter(s=>s.status==='pending').length}\n\n`;
+  let txt = `INFORME DE RUTA — ${nombre.toUpperCase()}\n`;
+  txt += `Fecha: ${fecha} · Hora: ${hora}\n`;
+  txt += `${'═'.repeat(45)}\n\n`;
+  txt += `RESUMEN:\n`;
+  txt += `  ✅ Entregadas:  ${done}\n`;
+  txt += `  ⚠️  Incidencias: ${inc}\n`;
+  txt += `  ⏳ Pendientes:  ${pend}\n`;
+  txt += `  📦 Total:       ${stops.length}\n\n`;
+  txt += `${'─'.repeat(45)}\n`;
+  txt += `DETALLE PARADAS:\n\n`;
 
   stops.forEach((s, i) => {
-    const st = s.status === 'done' ? '✅ ENTREGADO' : s.status === 'incident' ? `⚠️ INCIDENCIA: ${s.incidentType}` : '⏳ PENDIENTE';
-    txt += `${i+1}. ${s.company} (${s.cp})\n`;
-    txt += `   ${st}\n`;
-    if (s.incidentNote) txt += `   Nota: ${s.incidentNote}\n`;
+    const st = s.status === 'done'
+      ? `✅ ENTREGADO${s.deliveredAt ? ' (' + s.deliveredAt + ')' : ''}`
+      : s.status === 'incident'
+        ? `⚠️  INCIDENCIA: ${s.incidentType || 'Sin tipo'}`
+        : '⏳ PENDIENTE';
+    txt += `${String(i+1).padStart(2,'0')}. ${s.company}\n`;
+    txt += `    CP: ${s.cp}  Ciudad: ${s.city}\n`;
+    txt += `    Dir: ${s.address}\n`;
+    if (s.phone) txt += `    Tel: ${s.phone}\n`;
+    txt += `    Estado: ${st}\n`;
+    if (s.note) txt += `    Nota: ${s.note}\n`;
+    if (s.incidentNote) txt += `    Incidencia: ${s.incidentNote}\n`;
+    const albs = [...new Set(s.docs.map(d => d.num))];
+    if (albs.length) txt += `    Albaranes: ${albs.join(', ')}\n`;
     txt += '\n';
   });
 
-  const blob = new Blob([txt], { type: 'text/plain' });
+  txt += `${'─'.repeat(45)}\n`;
+  txt += `Generado por RutaApp\n`;
+
+  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `ruta_${now.replace(/\//g,'-')}.txt`;
+  const fileDate = now.toLocaleDateString('es-ES').replace(/\//g,'-');
+  a.href = url; a.download = `informe_${nombre}_${fileDate}.txt`;
   a.click();
-  toast('Resumen exportado ✓', 'ok');
+  toast('Informe exportado ✓', 'ok');
 }
 
 // ── RESET ────────────────────────────────────────────────────────────
@@ -1794,10 +1920,10 @@ function openHistorial() {
       const done = r.stops.filter(s => s.status === 'done').length;
       const inc  = r.stops.filter(s => s.status === 'incident').length;
       return `
-        <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; margin:10px 12px; padding:14px;">
+        <div onclick="openHistorialDetail(${i})" style="background:var(--surface); border:1px solid var(--border); border-radius:12px; margin:10px 12px; padding:14px; cursor:pointer; active:opacity:.8;">
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
             <div style="font-size:16px; font-weight:800; flex:1; color:var(--accent);">${r.nombre || r.fecha}</div>
-            <div style="font-size:11px; font-weight:700; color:var(--text3);">${r.stops.length} paradas</div>
+            <div style="font-size:11px; font-weight:700; color:var(--text3);">${r.stops.length} paradas ›</div>
           </div>
           <div style="font-size:11px; color:var(--text2); margin-bottom:6px;">📅 ${r.fecha}</div>
           <div style="display:flex; gap:8px; margin-bottom:10px;">
@@ -1922,7 +2048,176 @@ function cerrarRuta() {
   }, 800);
 }
 
-// ── DRAG & DROP ──────────────────────────────────────────────────────
+// ── SAVE NOTE ────────────────────────────────────────────────────────
+function saveNote(val) {
+  if (currentStopIdx === null) return;
+  stops[currentStopIdx].note = val;
+  saveState();
+}
+
+// ── SIGNATURE ────────────────────────────────────────────────────────
+let sigCanvas, sigCtx, sigDrawing = false, sigLastX, sigLastY;
+
+function initSig() {
+  sigCanvas = document.getElementById('sig-canvas');
+  if (!sigCanvas) return;
+  sigCtx = sigCanvas.getContext('2d');
+  sigCanvas.width = sigCanvas.offsetWidth;
+
+  // Load existing signature
+  const s = stops[currentStopIdx];
+  if (s && s.signature) {
+    const img = new Image();
+    img.onload = () => sigCtx.drawImage(img, 0, 0);
+    img.src = s.signature;
+  }
+
+  // Touch events
+  sigCanvas.addEventListener('touchstart', e => {
+    e.preventDefault();
+    sigDrawing = true;
+    const r = sigCanvas.getBoundingClientRect();
+    sigLastX = e.touches[0].clientX - r.left;
+    sigLastY = e.touches[0].clientY - r.top;
+  }, { passive: false });
+
+  sigCanvas.addEventListener('touchmove', e => {
+    e.preventDefault();
+    if (!sigDrawing) return;
+    const r = sigCanvas.getBoundingClientRect();
+    const x = e.touches[0].clientX - r.left;
+    const y = e.touches[0].clientY - r.top;
+    sigCtx.beginPath();
+    sigCtx.moveTo(sigLastX, sigLastY);
+    sigCtx.lineTo(x, y);
+    sigCtx.strokeStyle = '#E6EDF3';
+    sigCtx.lineWidth = 2.5;
+    sigCtx.lineCap = 'round';
+    sigCtx.stroke();
+    sigLastX = x; sigLastY = y;
+    saveSig();
+  }, { passive: false });
+
+  sigCanvas.addEventListener('touchend', () => { sigDrawing = false; });
+
+  // Mouse events (desktop/PWA)
+  sigCanvas.addEventListener('mousedown', e => {
+    sigDrawing = true;
+    const r = sigCanvas.getBoundingClientRect();
+    sigLastX = e.clientX - r.left;
+    sigLastY = e.clientY - r.top;
+  });
+  sigCanvas.addEventListener('mousemove', e => {
+    if (!sigDrawing) return;
+    const r = sigCanvas.getBoundingClientRect();
+    const x = e.clientX - r.left;
+    const y = e.clientY - r.top;
+    sigCtx.beginPath();
+    sigCtx.moveTo(sigLastX, sigLastY);
+    sigCtx.lineTo(x, y);
+    sigCtx.strokeStyle = '#E6EDF3';
+    sigCtx.lineWidth = 2.5;
+    sigCtx.lineCap = 'round';
+    sigCtx.stroke();
+    sigLastX = x; sigLastY = y;
+    saveSig();
+  });
+  sigCanvas.addEventListener('mouseup', () => { sigDrawing = false; });
+}
+
+function saveSig() {
+  if (!sigCanvas || currentStopIdx === null) return;
+  stops[currentStopIdx].signature = sigCanvas.toDataURL();
+  saveState();
+}
+
+function clearSig() {
+  if (!sigCanvas) return;
+  sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+  if (currentStopIdx !== null) {
+    stops[currentStopIdx].signature = null;
+    saveState();
+  }
+}
+
+// ── DRAG & DROP REORDER ───────────────────────────────────────────────
+let dragIdx = null;
+
+function dragStart(e, idx) {
+  dragIdx = idx;
+  e.dataTransfer.effectAllowed = 'move';
+  document.getElementById(`stop-card-${idx}`)?.classList.add('dragging');
+}
+
+function dragOver(e, idx) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.stop-card').forEach(c => c.classList.remove('drag-over'));
+  document.getElementById(`stop-card-${idx}`)?.classList.add('drag-over');
+}
+
+function dragDrop(e, idx) {
+  e.preventDefault();
+  if (dragIdx === null || dragIdx === idx) return;
+  const moved = stops.splice(dragIdx, 1)[0];
+  stops.splice(idx, 0, moved);
+  saveState();
+  renderList();
+  toast('Parada reordenada ✓', 'ok');
+}
+
+function dragEnd(e) {
+  document.querySelectorAll('.stop-card').forEach(c => {
+    c.classList.remove('dragging');
+    c.classList.remove('drag-over');
+  });
+  dragIdx = null;
+}
+
+// ── HISTORIAL DETAIL ──────────────────────────────────────────────────
+function openHistorialDetail(idx) {
+  const hist = getHistorial();
+  const r = hist[hist.length - 1 - idx]; // reversed order
+  if (!r) return;
+
+  document.getElementById('hd-title').textContent = r.nombre || r.fecha;
+
+  const done = r.stops.filter(s => s.status === 'done').length;
+  const inc  = r.stops.filter(s => s.status === 'incident').length;
+  const pend = r.stops.filter(s => s.status === 'pending').length;
+
+  document.getElementById('hd-content').innerHTML = `
+    <div style="padding:16px;">
+      <div style="font-size:12px; color:var(--text2); margin-bottom:12px;">📅 ${r.fecha}</div>
+      <div class="resumen-kpi" style="margin-bottom:16px;">
+        <div class="kpi-box green"><div class="num">${done}</div><div class="lbl">Entregadas</div></div>
+        <div class="kpi-box amber"><div class="num">${inc}</div><div class="lbl">Incidencias</div></div>
+        <div class="kpi-box blue"><div class="num">${r.stops.length}</div><div class="lbl">Total</div></div>
+        <div class="kpi-box gray"><div class="num">${pend}</div><div class="lbl">Pendientes</div></div>
+      </div>
+      ${r.hojaRuta ? `<div style="background:var(--surface); border:1px solid var(--green); border-radius:10px; padding:10px 14px; font-size:13px; color:var(--green); margin-bottom:16px;">📋 ${r.hojaRuta}</div>` : ''}
+      <div class="section-label" style="margin-bottom:10px;">Detalle paradas</div>
+      ${r.stops.map((s, i) => {
+        const icon = s.status === 'done' ? '✅' : s.status === 'incident' ? '⚠️' : '📦';
+        const stClass = s.status === 'done' ? 'st-ok' : s.status === 'incident' ? 'st-inc' : 'st-pend';
+        const stText  = s.status === 'done' ? 'Entregado' : s.status === 'incident' ? (s.incidentType || 'Incidencia') : 'Pendiente';
+        return `
+          <div class="resumen-list-item">
+            <div style="width:22px;height:22px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--text3);flex-shrink:0;">${i+1}</div>
+            <div class="ico">${icon}</div>
+            <div style="flex:1;min-width:0;">
+              <div class="name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.company}</div>
+              <div style="font-size:10px;color:var(--text3);">${s.cp} — ${s.city}</div>
+            </div>
+            <div class="st ${stClass}" style="flex-shrink:0;">${stText}</div>
+          </div>`;
+      }).join('')}
+    </div>
+  `;
+  showScreen('screen-historial-detail');
+}
+
+// ── DRAG & DROP (PDF upload zone) ────────────────────────────────────
 const zone = document.getElementById('upload-zone');
 zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
 zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
@@ -1937,6 +2232,31 @@ zone.addEventListener('drop', e => {
 
 // ── INIT ─────────────────────────────────────────────────────────────
 loadState();
+
+// ── SERVICE WORKER (PWA offline) ─────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  const swCode = `
+    const CACHE = 'rutaapp-v1';
+    const ASSETS = [
+      'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+    ];
+    self.addEventListener('install', e => {
+      e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS).catch(()=>{})));
+      self.skipWaiting();
+    });
+    self.addEventListener('activate', e => {
+      e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
+      self.clients.claim();
+    });
+    self.addEventListener('fetch', e => {
+      e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+    });
+  `;
+  const blob = new Blob([swCode], { type: 'application/javascript' });
+  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
+}
 </script>
 </body>
 </html>
