@@ -2,2261 +2,784 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>RutaApp — Entregas del día</title>
-<link rel="manifest" href="data:application/json,{%22name%22:%22RutaApp%22,%22short_name%22:%22RutaApp%22,%22display%22:%22standalone%22,%22background_color%22:%22%230D1117%22,%22theme_color%22:%22%2300C853%22,%22icons%22:[{%22src%22:%22https://cdn.jsdelivr.net/npm/emoji-datasource-apple@15.0.1/img/apple/64/1f69a.png%22,%22sizes%22:%2264x64%22,%22type%22:%22image/png%22}]}">
-<meta name="theme-color" content="#00C853">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="RutaApp">
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-  :root {
-    --bg:       #0D1117;
-    --surface:  #161B22;
-    --surface2: #1E2530;
-    --border:   #2A3441;
-    --accent:   #00C853;
-    --accent2:  #00E676;
-    --green:    #00C853;
-    --amber:    #FFB300;
-    --red:      #FF4444;
-    --blue:     #2979FF;
-    --purple:   #AA00FF;
-    --text:     #E6EDF3;
-    --text2:    #7D8B9A;
-    --text3:    #4A5568;
-    --radius:   12px;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); overscroll-behavior: none; }
-
-  /* ── SCREENS ── */
-  .screen { display: none; flex-direction: column; height: 100dvh; overflow: hidden; }
-  .screen.active { display: flex; }
-
-  /* ── UPLOAD SCREEN ── */
-  #screen-upload {
-    align-items: center; justify-content: center;
-    padding: 32px 24px; gap: 0;
-  }
-  .upload-logo {
-    font-size: 48px; margin-bottom: 16px;
-  }
-  .upload-title {
-    font-size: 26px; font-weight: 800; text-align: center;
-    letter-spacing: -0.5px; margin-bottom: 8px;
-  }
-  .upload-title span { color: var(--accent); }
-  .upload-sub {
-    font-size: 14px; color: var(--text2); text-align: center;
-    margin-bottom: 40px; line-height: 1.5;
-  }
-  .upload-zone {
-    width: 100%; background: var(--surface);
-    border: 2px dashed var(--border); border-radius: var(--radius);
-    padding: 40px 24px; text-align: center; cursor: pointer;
-    transition: border-color .2s, background .2s;
-    position: relative; margin-bottom: 16px;
-  }
-  .upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: #1a2c4a; }
-  .upload-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .upload-zone-icon { font-size: 36px; margin-bottom: 12px; }
-  .upload-zone-text { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
-  .upload-zone-hint { font-size: 12px; color: var(--text2); }
-  .upload-demo {
-    font-size: 13px; color: var(--accent); cursor: pointer;
-    text-decoration: underline; text-underline-offset: 3px;
-    background: none; border: none; font-family: inherit;
-  }
-
-  /* ── TOPBAR ── */
-  .topbar {
-    background: var(--surface); border-bottom: 1px solid var(--border);
-    padding: 14px 16px; display: flex; align-items: center; gap: 12px;
-    flex-shrink: 0;
-  }
-  .topbar-back {
-    background: none; border: none; color: var(--accent);
-    font-size: 20px; cursor: pointer; padding: 2px; line-height: 1;
-  }
-  .topbar-title { font-size: 16px; font-weight: 700; flex: 1; }
-  .topbar-badge {
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 20px; padding: 4px 10px;
-    font-size: 11px; font-weight: 700; color: var(--text2);
-  }
-
-  /* ── ROUTE LIST ── */
-  #screen-list { }
-  .list-header {
-    background: var(--surface); padding: 16px;
-    border-bottom: 1px solid var(--border); flex-shrink: 0;
-  }
-  .list-date { font-size: 12px; color: var(--text2); margin-bottom: 2px; }
-  .list-title { font-size: 20px; font-weight: 800; letter-spacing: -.3px; }
-  .list-stats {
-    display: flex; gap: 12px; margin-top: 12px;
-  }
-  .stat-pill {
-    display: flex; align-items: center; gap: 5px;
-    background: var(--surface2); border-radius: 20px;
-    padding: 5px 10px; font-size: 12px; font-weight: 600;
-  }
-  .stat-pill .dot { width: 7px; height: 7px; border-radius: 50%; }
-  .dot-green { background: var(--green); }
-  .dot-amber { background: var(--amber); }
-  .dot-gray  { background: var(--text3); }
-
-  .list-scroll { flex: 1; overflow-y: auto; padding: 12px; }
-
-  .stop-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); margin-bottom: 10px;
-    overflow: hidden; cursor: pointer;
-    transition: border-color .15s, transform .1s;
-    active: transform: scale(.99);
-  }
-  .stop-card:active { transform: scale(.99); }
-  .stop-card.done { border-color: var(--green); opacity: .75; }
-  .stop-card.incident { border-color: var(--amber); }
-
-  .stop-top {
-    padding: 14px 14px 10px;
-    display: flex; align-items: flex-start; gap: 10px;
-  }
-  .stop-num {
-    width: 28px; height: 28px; border-radius: 8px;
-    background: var(--surface2); color: var(--text2);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 1px;
-  }
-  .stop-card.done .stop-num { background: #0d3d2a; color: var(--green); }
-  .stop-card.incident .stop-num { background: #3d2c0d; color: var(--amber); }
-
-  .stop-info { flex: 1; min-width: 0; }
-  .stop-name { font-size: 14px; font-weight: 700; line-height: 1.3; }
-  .stop-city { font-size: 11px; color: var(--text2); margin-top: 2px; }
-  .stop-addr { font-size: 11px; color: var(--text2); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-  .stop-status {
-    font-size: 18px; flex-shrink: 0; margin-top: 2px;
-  }
-
-  .stop-docs {
-    padding: 0 14px 8px 52px;
-    display: flex; flex-wrap: wrap; gap: 6px;
-  }
-  .doc-tag {
-    background: var(--surface2); border-radius: 6px;
-    padding: 3px 8px; font-size: 10px; font-weight: 600;
-    color: var(--text2); font-family: monospace;
-  }
-  .stop-bultos {
-    padding: 0 14px 8px 52px;
-    font-size: 11px; color: var(--text2);
-  }
-  .stop-card-actions {
-    padding: 0 12px 10px 12px;
-    display: flex; justify-content: flex-end;
-  }
-  .btn-delete-stop {
-    background: none; border: 1px solid var(--border);
-    border-radius: 7px; padding: 5px 10px;
-    font-size: 11px; font-weight: 600; color: var(--red);
-    cursor: pointer;
-  }
-  .btn-delete-stop:active { background: #2a1515; }
-
-  /* ── DETAIL SCREEN ── */
-  #screen-detail { }
-  .detail-scroll { flex: 1; overflow-y: auto; padding: 16px; }
-
-  .detail-address-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 16px; margin-bottom: 16px;
-  }
-  .detail-address-card .label { font-size: 10px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 6px; }
-  .detail-company { font-size: 17px; font-weight: 800; margin-bottom: 4px; }
-  .detail-addr-line { font-size: 13px; color: var(--text2); margin-bottom: 2px; }
-  .detail-phone {
-    display: inline-flex; align-items: center; gap: 6px;
-    margin-top: 8px; background: var(--surface2);
-    border-radius: 8px; padding: 8px 12px;
-    font-size: 13px; font-weight: 600; color: var(--accent);
-    text-decoration: none;
-  }
-  .btn-maps {
-    display: flex; align-items: center; justify-content: center; gap: 6px;
-    margin-top: 10px; background: var(--surface2);
-    border: 1px solid var(--accent); border-radius: 8px; padding: 10px 14px;
-    font-size: 13px; font-weight: 700; color: var(--accent);
-    text-decoration: none; cursor: pointer; width: 100%;
-    transition: background .15s;
-  }
-  .btn-maps:active { background: #0d2a1a; }
-
-  .docs-section { margin-bottom: 16px; }
-  .section-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px; }
-  .doc-row {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: 11px 13px; margin-bottom: 6px;
-    display: flex; align-items: center; gap: 10px;
-  }
-  .doc-row-num { font-size: 11px; font-family: monospace; color: var(--accent); font-weight: 700; flex-shrink: 0; }
-  .doc-row-name { font-size: 12px; color: var(--text); flex: 1; line-height: 1.3; }
-  .doc-row-qty { font-size: 12px; font-weight: 700; color: var(--text2); flex-shrink: 0; }
-
-  /* ── ACTION BUTTONS ── */
-  .action-bar {
-    padding: 12px 16px; background: var(--surface);
-    border-top: 1px solid var(--border); flex-shrink: 0;
-    display: flex; flex-direction: column; gap: 8px;
-  }
-  .btn {
-    width: 100%; padding: 15px; border-radius: 10px; border: none;
-    font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 700;
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    gap: 8px; transition: opacity .15s, transform .1s;
-  }
-  .btn:active { transform: scale(.98); opacity: .9; }
-  .btn-green { background: var(--green); color: #fff; }
-  .btn-amber { background: var(--surface2); color: var(--amber); border: 1.5px solid var(--amber); }
-  .btn-row { display: flex; gap: 8px; }
-  .btn-row .btn { flex: 1; }
-  .btn-ghost { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); font-size: 13px; padding: 11px; }
-
-  /* ── PHOTO SECTION ── */
-  .photo-section { margin-bottom: 16px; }
-  .photo-upload-zone {
-    background: var(--surface); border: 2px dashed var(--border);
-    border-radius: var(--radius); padding: 28px 16px; text-align: center;
-    cursor: pointer; position: relative; transition: border-color .15s;
-  }
-  .photo-upload-zone:hover { border-color: var(--accent); }
-  .photo-upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .photo-upload-zone .icon { font-size: 28px; margin-bottom: 8px; }
-  .photo-upload-zone .text { font-size: 13px; font-weight: 600; color: var(--text2); }
-  .photo-preview {
-    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px;
-  }
-  .photo-thumb {
-    aspect-ratio: 1; border-radius: 8px; overflow: hidden;
-    background: var(--surface2); position: relative;
-  }
-  .photo-thumb img { width: 100%; height: 100%; object-fit: cover; }
-  .photo-thumb-remove {
-    position: absolute; top: 4px; right: 4px;
-    background: rgba(0,0,0,.6); color: #fff;
-    border: none; border-radius: 50%; width: 20px; height: 20px;
-    font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center;
-  }
-
-  /* ── INCIDENT FORM ── */
-  .incident-section { margin-bottom: 16px; display: none; }
-  .incident-section.open { display: block; }
-  .incident-textarea {
-    width: 100%; background: var(--surface); border: 1.5px solid var(--border);
-    border-radius: 10px; padding: 12px; font-family: 'Inter', sans-serif;
-    font-size: 14px; color: var(--text); resize: none; outline: none;
-    transition: border-color .15s; min-height: 80px;
-  }
-  .incident-textarea:focus { border-color: var(--amber); }
-  .incident-types {
-    display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px;
-  }
-  .incident-type {
-    background: var(--surface2); border: 1.5px solid var(--border);
-    border-radius: 20px; padding: 6px 12px;
-    font-size: 12px; font-weight: 600; color: var(--text2);
-    cursor: pointer; transition: all .15s;
-  }
-  .incident-type.selected { border-color: var(--amber); color: var(--amber); background: #3d2c0d; }
-
-  /* ── STATUS BADGE on detail ── */
-  .status-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    border-radius: 20px; padding: 6px 12px;
-    font-size: 12px; font-weight: 700; margin-bottom: 16px;
-  }
-  .badge-done { background: #0d3d2a; color: var(--green); }
-  .badge-incident { background: #3d2c0d; color: var(--amber); }
-  .badge-pending { background: var(--surface2); color: var(--text2); }
-
-  /* ── TOAST ── */
-  .toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 12px 20px;
-    font-size: 14px; font-weight: 600; white-space: nowrap;
-    transition: transform .25s; z-index: 999; pointer-events: none;
-  }
-  .toast.show { transform: translateX(-50%) translateY(0); }
-  .toast.ok { border-color: var(--green); color: var(--green); }
-  .toast.warn { border-color: var(--amber); color: var(--amber); }
-
-  /* ── RESUMEN SCREEN ── */
-  #screen-resumen { }
-  .resumen-scroll { flex: 1; overflow-y: auto; padding: 16px; }
-  .resumen-kpi {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;
-  }
-  .kpi-box {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 16px; text-align: center;
-  }
-  .kpi-box .num { font-size: 32px; font-weight: 800; line-height: 1; }
-  .kpi-box .lbl { font-size: 11px; color: var(--text2); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
-  .kpi-box.green .num { color: var(--green); }
-  .kpi-box.amber .num { color: var(--amber); }
-  .kpi-box.blue  .num { color: var(--accent); }
-  .kpi-box.gray  .num { color: var(--text2); }
-
-  .resumen-list-item {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 12px 14px; margin-bottom: 8px;
-    display: flex; align-items: center; gap: 10px;
-  }
-  .resumen-list-item .ico { font-size: 18px; flex-shrink: 0; }
-  .resumen-list-item .name { font-size: 13px; font-weight: 600; flex: 1; }
-  .resumen-list-item .st { font-size: 11px; font-weight: 700; }
-  .st-ok { color: var(--green); }
-  .st-inc { color: var(--amber); }
-  .st-pend { color: var(--text3); }
-
-  .btn-export {
-    margin: 0 16px 16px; background: var(--accent); color: #fff;
-    border: none; border-radius: 10px; padding: 15px;
-    font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 700;
-    cursor: pointer; width: calc(100% - 32px); display: flex;
-    align-items: center; justify-content: center; gap: 8px;
-  }
-
-  /* ── ALBARAN BLOCKS ── */
-  .albaran-block {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; margin-bottom: 10px; overflow: hidden;
-  }
-  .albaran-header {
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 12px; background: var(--surface2);
-    border-bottom: 1px solid var(--border);
-  }
-  .albaran-num {
-    font-size: 11px; font-family: monospace; font-weight: 700;
-    color: var(--accent); flex: 1;
-  }
-  .albaran-cam-btn {
-    background: var(--surface); border: 1.5px solid var(--border);
-    border-radius: 8px; padding: 5px 10px;
-    font-size: 12px; font-weight: 600; color: var(--text2);
-    cursor: pointer; white-space: nowrap; flex-shrink: 0;
-    transition: border-color .15s, color .15s;
-  }
-  .albaran-cam-btn:active { border-color: var(--accent); color: var(--accent); }
-  .albaran-block .doc-row {
-    border: none; border-bottom: 1px solid var(--border);
-    border-radius: 0; margin-bottom: 0; padding: 9px 12px;
-  }
-  .albaran-block .doc-row:last-of-type { border-bottom: none; }
-
-  /* ── SCAN SCREEN ── */
-  .scan-header { padding: 16px; background: var(--surface); border-bottom: 1px solid var(--border); }
-  .scan-pages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-  .scan-page-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; overflow: hidden; position: relative;
-  }
-  .scan-page-card img { width: 100%; display: block; max-height: 200px; object-fit: cover; }
-  .scan-page-label {
-    padding: 8px 12px; font-size: 12px; font-weight: 600; color: var(--text2);
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .scan-page-remove {
-    background: none; border: none; color: var(--red);
-    font-size: 16px; cursor: pointer; padding: 2px 6px;
-  }
-  .scan-add-btn {
-    border: 2px dashed var(--border); border-radius: 10px;
-    background: none; color: var(--text2); padding: 18px;
-    font-size: 14px; font-weight: 600; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    transition: border-color .15s, color .15s;
-  }
-  .scan-add-btn:active { border-color: var(--accent); color: var(--accent); }
-  .scan-result {
-    margin: 0 16px 8px; padding: 12px 14px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; font-size: 13px; color: var(--text2);
-  }
-  .scan-result.ok  { border-color: var(--green); color: var(--green); }
-  .scan-result.warn { border-color: var(--amber); color: var(--amber); }
-
-  /* ── MODAL MOTIVOS ── */
-  .motivo-chip {
-    background: var(--surface2); border: 1.5px solid var(--border);
-    border-radius: 20px; padding: 6px 12px;
-    font-size: 12px; font-weight: 600; color: var(--text2);
-    cursor: pointer; transition: all .15s;
-  }
-  .motivo-chip.selected {
-    border-color: var(--red); color: var(--red);
-    background: rgba(255,68,68,.1);
-  }
-
-  /* ── DRAG HANDLE ── */
-  .drag-handle {
-    display: flex; align-items: center; justify-content: center;
-    width: 32px; flex-shrink: 0; cursor: grab; color: var(--text3);
-    font-size: 16px; padding: 4px 0; touch-action: none;
-  }
-  .drag-handle:active { cursor: grabbing; }
-  .stop-card.dragging { opacity: .5; border-color: var(--accent); background: var(--surface2); }
-  .stop-card.drag-over { border-color: var(--accent); border-style: dashed; }
-
-  /* ── SEARCH BAR ── */
-  .search-bar {
-    padding: 10px 12px 6px; background: var(--surface);
-    border-bottom: 1px solid var(--border); flex-shrink: 0;
-  }
-  .search-input {
-    width: 100%; background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 9px 14px 9px 36px; font-family: 'Inter', sans-serif;
-    font-size: 14px; color: var(--text); outline: none;
-    transition: border-color .15s; position: relative;
-  }
-  .search-input:focus { border-color: var(--accent); }
-  .search-wrap { position: relative; }
-  .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 15px; pointer-events: none; }
-
-  /* ── NOTE SECTION ── */
-  .note-textarea {
-    width: 100%; background: var(--surface2); border: 1.5px solid var(--border);
-    border-radius: 10px; padding: 10px 12px; font-family: 'Inter', sans-serif;
-    font-size: 13px; color: var(--text); resize: none; outline: none;
-    transition: border-color .15s; min-height: 64px;
-  }
-  .note-textarea:focus { border-color: var(--blue); }
-
-  /* ── SIGNATURE ── */
-  .sig-canvas {
-    width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
-    background: #1a1f2a; display: block; touch-action: none; cursor: crosshair;
-  }
-
-  /* ── TIME BADGE on card ── */
-  .stop-time-badge {
-    font-size: 10px; font-weight: 700; color: var(--green);
-    background: #0d3d2a; border-radius: 4px; padding: 1px 5px;
-    display: inline-block; margin-left: 4px; vertical-align: middle;
-  }
-
-  /* ── CALL QUICK BTN on card ── */
-  .stop-call-btn {
-    background: none; border: none; font-size: 18px; padding: 4px 6px;
-    cursor: pointer; flex-shrink: 0; line-height: 1;
-  }
-
-  /* scrollbar */
-  ::-webkit-scrollbar { width: 3px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FutPredict</title>
 </head>
 <body>
+<div id="root"></div>
 
-<!-- ════════════ MENÚ PRINCIPAL ════════════ -->
-<div class="screen active" id="screen-menu">
-  <div style="flex:1; display:flex; flex-direction:column; padding:0 0 16px;">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-    <!-- Header estilo GestorRutas -->
-    <div style="padding:20px 20px 16px; background:var(--surface); border-bottom:1px solid var(--border);">
-      <div style="font-size:11px; font-weight:700; color:var(--accent); letter-spacing:.8px; text-transform:uppercase; margin-bottom:4px;" id="menu-datetime">Cargando…</div>
-      <div style="font-size:24px; font-weight:800; letter-spacing:-.5px;">Ruta<span style="color:var(--accent)">App</span></div>
-      <div style="font-size:13px; color:var(--text2); margin-top:2px;">Gestión de entregas del día</div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef } = React;
+
+const API_KEY = "c460c85583f20360b02362cfac979ff1";
+
+const C = {
+  bg:"#07090F", card:"#0E1420", panel:"#131A28", border:"#1C2A3F",
+  accent:"#00D4FF", green:"#00E58A", amber:"#FFB800", red:"#FF4757",
+  purple:"#9B59FF", text:"#EDF2FB", mid:"#7A91B0", low:"#3A5070",
+  mono:"'JetBrains Mono','Courier New',monospace",
+};
+
+const css = `
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{background:${C.bg};color:${C.text};font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+  ::-webkit-scrollbar{display:none;}
+  input,select,button{font-family:inherit;}
+  input::placeholder{color:${C.low};}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+  /* Forzar fondo oscuro dentro de los widgets oficiales */
+  api-sports-widget {
+    --background-color: ${C.card};
+    --text-color: ${C.text};
+    --text-color-info: ${C.mid};
+    --border: 1px solid ${C.border};
+    --primary-color: ${C.accent};
+    --success-color: ${C.green};
+    --warning-color: ${C.amber};
+    --danger-color: ${C.red};
+    --light-color: ${C.low};
+    --hover: rgba(0,212,255,0.06);
+    --primary-font-size: 0.78rem;
+    --secondary-font-size: 0.75rem;
+    --title-font-size: 0.85rem;
+    border-radius: 12px;
+    overflow: hidden;
+    display: block;
+    width: 100%;
+  }
+`;
+
+// ── INYECCIÓN DEL SCRIPT OFICIAL DE API-SPORTS ───────────────
+function useApiSportsScript() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    if (document.querySelector('script[data-apisports]')) { setReady(true); return; }
+    const s = document.createElement("script");
+    s.type = "module";
+    s.src = "https://widgets.api-sports.io/3.1.0/widgets.js";
+    s.setAttribute("data-apisports", "true");
+    s.onload = () => setReady(true);
+    document.head.appendChild(s);
+  }, []);
+  return ready;
+}
+
+// ── CONFIG WIDGET (necesario una vez) ────────────────────────
+function ApiConfig() {
+  return (
+    <api-sports-widget
+      data-type="config"
+      data-key={API_KEY}
+      data-sport="football"
+      data-lang="es"
+      data-theme="FutPredict"
+      data-show-logos="true"
+      data-timezone="Europe/Madrid"
+      data-show-errors="true"
+    />
+  );
+}
+
+// ── MOTOR ESTADÍSTICO ─────────────────────────────────────────
+function poissonPMF(l, k) {
+  if (k < 0) return 0;
+  let x = -l + k * Math.log(Math.max(l, 0.001));
+  for (let i = 1; i <= k; i++) x -= Math.log(i);
+  return Math.exp(x);
+}
+
+function poissonCDFAtMost(lambda, k) {
+  let cum = 0;
+  for (let i = 0; i <= k; i++) cum += poissonPMF(lambda, i);
+  return cum;
+}
+
+// Mercado Over/Under genérico vía Poisson agregado (suma de Poisson independientes ≈ Poisson)
+function ouMarket(lambdaTotal, line) {
+  const k = Math.floor(line);
+  const under = poissonCDFAtMost(lambdaTotal, k);
+  return { over: Math.max(0, Math.min(1, 1 - under)), under: Math.max(0, Math.min(1, under)) };
+}
+
+// Intervalo de confianza 95% (proporción binomial) sobre el resultado de la simulación Monte Carlo
+function ci95(p, n) {
+  const se = Math.sqrt(Math.max(p * (1 - p), 0.0001) / n);
+  return 1.96 * se;
+}
+
+function runEngine(lH, lA) {
+  const N = 8, m = [];
+  for (let i = 0; i < N; i++) {
+    m[i] = [];
+    for (let j = 0; j < N; j++) {
+      let b = poissonPMF(lH, i) * poissonPMF(lA, j);
+      let dc = 1;
+      if (i===0&&j===0) dc=1-lH*lA*0.04;
+      else if (i===1&&j===0) dc=1+lA*0.04;
+      else if (i===0&&j===1) dc=1+lH*0.04;
+      else if (i===1&&j===1) dc=1-0.04;
+      m[i][j] = Math.max(0, b*dc);
+    }
+  }
+  let tot = m.flat().reduce((a,b)=>a+b,0);
+  for (let i=0;i<N;i++) for (let j=0;j<N;j++) m[i][j]/=tot;
+  let ph=0,pd=0,pa=0,ou25=0,ou15=0,bt=0,xh=0,xa=0;
+  for (let i=0;i<N;i++) for (let j=0;j<N;j++) {
+    if(i>j)ph+=m[i][j]; else if(i===j)pd+=m[i][j]; else pa+=m[i][j];
+    if(i+j>2.5)ou25+=m[i][j];
+    if(i+j>1.5)ou15+=m[i][j];
+    if(i>0&&j>0)bt+=m[i][j];
+    xh+=i*m[i][j]; xa+=j*m[i][j];
+  }
+  const scores=[];
+  for(let i=0;i<N;i++) for(let j=0;j<N;j++) scores.push({h:i,a:j,p:m[i][j]});
+  scores.sort((a,b)=>b.p-a.p);
+  // Monte Carlo 20k iteraciones
+  const N_MC = 20000;
+  function sp(l){let k=0,p=1,L=Math.exp(-l);do{k++;p*=Math.random();}while(p>L);return k-1;}
+  let mh=0,md=0,ma=0;
+  for(let i=0;i<N_MC;i++){const h=sp(lH),a=sp(lA);if(h>a)mh++;else if(h===a)md++;else ma++;}
+  const bl=(dc,mc)=>dc*0.65+mc*0.35;
+  const bH=bl(ph,mh/N_MC),bD=bl(pd,md/N_MC),bA=bl(pa,ma/N_MC);
+  const t=bH+bD+bA;
+  const probH=bH/t, probD=bD/t, probA=bA/t;
+  const ci = { h: ci95(probH, N_MC), d: ci95(probD, N_MC), a: ci95(probA, N_MC) };
+  return{prob:{h:probH,d:probD,a:probA},ci,ou25,ou15,bt,xg:{h:xh,a:xa},top:scores.slice(0,10)};
+}
+
+async function callClaude(home, away, context="") {
+  const prompt = `Partido de fútbol: ${home} vs ${away}. ${context}
+Eres analista cuantitativo. Con los datos que conoces de estos equipos da:
+- attackStrength local (0.5-2.5) y visitante
+- defenseStrength local y visitante
+- homeAdvantage (1.0-1.3)
+- factores clave reales (forma, lesionados conocidos, motivación)
+- value bets con motivo estadístico
+- probable goleador de cada equipo
+- córners esperados (local/visitante, normalmente 3-7 cada uno)
+- tarjetas amarillas esperadas (local/visitante, normalmente 1-4 cada uno)
+- probabilidad de tarjeta roja (local/visitante, normalmente 0.02-0.15)
+- tiros totales esperados (local/visitante, normalmente 8-18 cada uno)
+- tiros a puerta esperados (local/visitante, normalmente 3-9 cada uno)
+- faltas esperadas (local/visitante, normalmente 8-16 cada uno)
+- posesión estimada (local/visitante, deben sumar 100)
+
+Responde SOLO JSON sin markdown:
+{"attackStrength":{"home":<n>,"away":<n>},"defenseStrength":{"home":<n>,"away":<n>},"homeAdvantage":<n>,"keyFactors":["<f1>","<f2>","<f3>","<f4>"],"narrative":"<análisis 2-3 frases para apostar>","scorers":[{"name":"<jugador>","team":"home","prob":<0-1>},{"name":"<jugador>","team":"home","prob":<0-1>},{"name":"<jugador>","team":"away","prob":<0-1>},{"name":"<jugador>","team":"away","prob":<0-1>}],"valueBets":[{"market":"<mercado>","pick":"<pick>","reason":"<motivo con dato>","edge":"<alta|media|baja>"}],"confidence":<0-100>,"expectedCorners":{"home":<n>,"away":<n>},"expectedCards":{"home":<n>,"away":<n>},"redCardProb":{"home":<n>,"away":<n>},"expectedShots":{"home":<n>,"away":<n>},"expectedShotsOnTarget":{"home":<n>,"away":<n>},"expectedFouls":{"home":<n>,"away":<n>},"possession":{"home":<n>,"away":<n>}}`;
+  try {
+    const r = await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1400,system:"Analista de fútbol para apuestas. SOLO JSON.",messages:[{role:"user",content:prompt}]})});
+    const d = await r.json();
+    return JSON.parse(d.content?.[0]?.text?.replace(/```json|```/g,"").trim()||"{}");
+  } catch(e){ return {}; }
+}
+
+// Calculadora EV / Kelly para cuotas introducidas manualmente
+function evCalc(prob, oddStr) {
+  const o = parseFloat(oddStr);
+  if (!o || o <= 1 || !prob) return null;
+  const ev = prob * o - 1;
+  const b = o - 1;
+  const kellyFull = Math.max(0, (prob * b - (1 - prob)) / b);
+  const kelly = Math.min(0.25, kellyFull * 0.5); // medio-Kelly, capado al 25%
+  return { ev, edge: prob - 1 / o, kelly };
+}
+
+// ── COMPONENTES ───────────────────────────────────────────────
+function Spinner(){return <div style={{width:18,height:18,border:`2px solid ${C.border}`,borderTop:`2px solid ${C.accent}`,borderRadius:"50%",animation:"spin 0.7s linear infinite",flexShrink:0}}/>;}
+function Bar({value,color,h=6}){return(<div style={{height:h,borderRadius:3,background:C.border,overflow:"hidden"}}><div style={{height:"100%",width:`${Math.min(100,Math.round(value*100))}%`,background:color,borderRadius:3,transition:"width 0.6s ease"}}/></div>);}
+function Card({children,style={},glow=false}){return(<div style={{background:C.card,border:`1px solid ${glow?C.accent+"50":C.border}`,borderRadius:14,padding:16,...style}}>{children}</div>);}
+function Sec({children}){return <div style={{fontSize:11,fontWeight:700,color:C.mid,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>{children}</div>;}
+function Pill({children,color}){return <span style={{display:"inline-block",padding:"3px 9px",borderRadius:20,fontSize:10,fontWeight:700,background:`${color||C.accent}20`,color:color||C.accent,border:`1px solid ${color||C.accent}30`}}>{children}</span>;}
+
+function AdvRow({label, home, away, ouLine, ouLambdaTotal, color}) {
+  const ou = ouMarket(ouLambdaTotal, ouLine);
+  return (
+    <div style={{marginBottom:14}}>
+      <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+        <span style={{fontSize:13,color:C.text,fontWeight:600}}>{label}</span>
+        <span style={{fontSize:12,color:C.low}}>Más {ouLine}: <b style={{color}}>{Math.round(ou.over*100)}%</b></span>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+        <div style={{background:C.panel,borderRadius:8,padding:"7px 10px",textAlign:"center"}}>
+          <div style={{fontSize:10,color:C.low}}>Local</div>
+          <div style={{fontFamily:C.mono,fontWeight:800,fontSize:15,color}}>{home!=null?home.toFixed(1):"—"}</div>
+        </div>
+        <div style={{background:C.panel,borderRadius:8,padding:"7px 10px",textAlign:"center"}}>
+          <div style={{fontSize:10,color:C.low}}>Visitante</div>
+          <div style={{fontFamily:C.mono,fontWeight:800,fontSize:15,color:C.purple}}>{away!=null?away.toFixed(1):"—"}</div>
+        </div>
+      </div>
     </div>
+  );
+}
 
-    <!-- Tarjetas de estado rápido -->
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:16px 16px 0;" id="menu-stats-grid"></div>
+// ── PANTALLA: PARTIDOS DEL DÍA (widget oficial) ───────────────
+function PartidosScreen({ onPredict, scriptReady }) {
+  const today = new Date().toISOString().split("T")[0];
+  const tomorrow = new Date(Date.now()+86400000).toISOString().split("T")[0];
+  const [dia, setDia] = useState("hoy");
 
-    <!-- Opciones del menú -->
-    <div style="padding:16px; display:flex; flex-direction:column; gap:10px; flex:1;">
+  // IDs de ligas principales + Mundial 2026 (id=1)
+  const LIGAS = "1-140-39-78-135-61-2-3";
 
-      <!-- Ruta Actual: solo visible si hay ruta activa -->
-      <div id="menu-btn-actual" style="display:none;">
-        <button onclick="showScreen('screen-list')" style="width:100%; background:var(--accent); border:none; border-radius:14px; padding:20px; display:flex; align-items:center; gap:14px; cursor:pointer;" ontouchstart="this.style.opacity='.85'" ontouchend="this.style.opacity='1'">
-          <div style="font-size:32px; line-height:1;">🚛</div>
-          <div style="text-align:left;">
-            <div style="font-size:17px; font-weight:800; color:#fff;">Ruta actual</div>
-            <div style="font-size:12px; color:rgba(255,255,255,.75); margin-top:2px;" id="menu-ruta-actual-sub">Ver y gestionar entregas</div>
-          </div>
-          <div style="margin-left:auto; font-size:20px; color:rgba(255,255,255,.6);">›</div>
+  return (
+    <div style={{paddingBottom:80}}>
+      <div style={{padding:"20px 16px 14px"}}>
+        <div style={{fontSize:11,fontWeight:700,color:C.accent,letterSpacing:"0.1em",textTransform:"uppercase",marginBottom:4}}>⚽ FutPredict</div>
+        <div style={{fontSize:22,fontWeight:800,letterSpacing:"-0.02em"}}>Partidos en vivo</div>
+        <div style={{fontSize:13,color:C.mid,marginTop:2}}>Toca un partido → predice</div>
+      </div>
+
+      {/* Selector día */}
+      <div style={{padding:"0 16px 14px",display:"flex",gap:8}}>
+        {[{id:"hoy",label:"Hoy"},{id:"manana",label:"Mañana"}].map(d=>(
+          <button key={d.id} onClick={()=>setDia(d.id)} style={{
+            flex:1,padding:"9px 4px",borderRadius:10,border:`1px solid ${dia===d.id?C.accent+"40":C.border}`,
+            background:dia===d.id?`${C.accent}15`:C.card,
+            color:dia===d.id?C.accent:C.mid,fontSize:13,fontWeight:600,cursor:"pointer",
+          }}>{d.label}</button>
+        ))}
+      </div>
+
+      {/* Botón predictor personalizado */}
+      <div style={{padding:"0 16px 14px"}}>
+        <button onClick={()=>onPredict(null)} style={{
+          width:"100%",padding:"11px 16px",borderRadius:10,
+          border:`1px dashed ${C.accent}50`,background:`${C.accent}08`,
+          color:C.accent,fontSize:13,fontWeight:700,cursor:"pointer",
+          display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+        }}>
+          ⚡ Predecir cualquier partido
         </button>
       </div>
 
-      <!-- Cargar Ruta Nueva -->
-      <button onclick="showScreen('screen-upload')" style="width:100%; background:var(--surface); border:1.5px solid var(--border); border-radius:14px; padding:20px; display:flex; align-items:center; gap:14px; cursor:pointer;" ontouchstart="this.style.borderColor='var(--accent)'" ontouchend="this.style.borderColor='var(--border)'">
-        <div style="font-size:32px; line-height:1;">📄</div>
-        <div style="text-align:left;">
-          <div style="font-size:17px; font-weight:800; color:var(--text);">Cargar ruta</div>
-          <div style="font-size:12px; color:var(--text2); margin-top:2px;">Subir PDF o escanear albaranes</div>
-        </div>
-        <div style="margin-left:auto; font-size:20px; color:var(--text3);">›</div>
-      </button>
-
-      <!-- Rutas Anteriores -->
-      <button onclick="openHistorial()" style="width:100%; background:var(--surface); border:1.5px solid var(--border); border-radius:14px; padding:20px; display:flex; align-items:center; gap:14px; cursor:pointer;" ontouchstart="this.style.borderColor='var(--purple)'" ontouchend="this.style.borderColor='var(--border)'">
-        <div style="font-size:32px; line-height:1;">🗂️</div>
-        <div style="text-align:left;">
-          <div style="font-size:17px; font-weight:800; color:var(--text);">Rutas anteriores</div>
-          <div style="font-size:12px; color:var(--text2); margin-top:2px;" id="menu-historial-sub">Historial de días anteriores</div>
-        </div>
-        <div style="margin-left:auto; font-size:20px; color:var(--text3);">›</div>
-      </button>
-
-    </div>
-  </div>
-</div>
-
-<!-- ════════════ UPLOAD SCREEN ════════════ -->
-<div class="screen" id="screen-upload">
-  <div class="topbar">
-    <button class="topbar-back" onclick="showScreen('screen-menu')">←</button>
-    <div class="topbar-title">Cargar ruta</div>
-  </div>
-  <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 24px; gap:0;">
-    <div class="upload-zone" id="upload-zone" style="margin-bottom:16px;">
-      <input type="file" accept=".pdf" onchange="loadPDF(this)">
-      <div class="upload-zone-icon">📄</div>
-      <div class="upload-zone-text">Toca para subir el PDF</div>
-      <div class="upload-zone-hint">El PDF de ruta que recibes por WhatsApp</div>
-    </div>
-    <div style="width:100%; text-align:center; font-size:12px; color:var(--text3); margin:8px 0;">— o escanear albaranes —</div>
-    <button class="btn btn-ghost" style="width:100%; margin-bottom:12px;" onclick="openScan()">📷 Escanear albaranes con IA</button>
-    <button class="upload-demo" onclick="loadDemo()">Probar con datos de ejemplo</button>
-  </div>
-</div>
-
-<!-- ════════════ LIST SCREEN ════════════ -->
-<div class="screen" id="screen-list">
-  <div class="list-header">
-    <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px;">
-      <button class="topbar-back" onclick="showScreen('screen-menu')" style="font-size:18px; padding:0;">←</button>
-      <div class="list-date" id="list-date" style="margin-bottom:0;"></div>
-    </div>
-    <div class="list-title" id="list-title">Entregas del día</div>
-    <div class="list-stats" id="list-stats"></div>
-  </div>
-  <div class="search-bar">
-    <div class="search-wrap">
-      <span class="search-icon">🔍</span>
-      <input class="search-input" id="search-input" type="text" placeholder="Buscar tienda o CP…" oninput="filterList(this.value)">
-    </div>
-  </div>
-  <div class="list-scroll" id="list-scroll"></div>
-  <div style="padding:12px 12px 6px; background:var(--surface); border-top:1px solid var(--border); display:flex; gap:8px;">
-    <button class="btn btn-ghost" style="flex:1" onclick="showScreen('screen-resumen')">📊 Resumen</button>
-    <button class="btn btn-ghost" style="flex:1; color:var(--accent);" onclick="openScan()">➕ Añadir</button>
-    <button class="btn btn-ghost" style="flex:1; color:var(--red);" onclick="openGestionar()">🗑 Gestionar</button>
-  </div>
-  <div style="padding:0 12px 16px; background:var(--surface);">
-    <button class="btn btn-green" id="btn-list-finalizar" onclick="checkAndFinalizar()" style="width:100%;">🏁 Finalizar ruta</button>
-  </div>
-</div>
-
-<!-- ════════════ SCAN SCREEN ════════════ -->
-<div class="screen" id="screen-scan">
-  <div class="topbar">
-    <button class="topbar-back" onclick="showScreen('screen-list')">←</button>
-    <div class="topbar-title">Añadir tienda</div>
-  </div>
-  <div class="detail-scroll" id="scan-pages" style="padding:16px; display:flex; flex-direction:column; gap:10px;">
-    <!-- páginas escaneadas -->
-  </div>
-  <div id="scan-result-msg"></div>
-  <div style="padding:12px 16px 16px; display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--border); background:var(--surface);">
-    <label style="display:flex; align-items:center; justify-content:center; gap:8px; background:var(--surface2); border:1.5px dashed var(--border); border-radius:10px; padding:13px; font-size:14px; font-weight:600; color:var(--text2); cursor:pointer;">
-      <input type="file" accept="image/*" capture="environment" onchange="addScanPage(this)" style="display:none">
-      📷 Escanear albarán físico
-    </label>
-    <button id="scan-process-btn" class="btn btn-green" onclick="processScan()" style="display:none">
-      ✨ Procesar con IA
-    </button>
-    <div style="text-align:center; font-size:12px; color:var(--text3); margin: 2px 0;">— o añadir manualmente —</div>
-    <button class="btn btn-ghost" onclick="openManualAdd()">✏️ Añadir a mano</button>
-  </div>
-</div>
-
-<!-- ════════════ MANUAL ADD SCREEN ════════════ -->
-<div class="screen" id="screen-manual">
-  <div class="topbar">
-    <button class="topbar-back" onclick="showScreen('screen-scan')">←</button>
-    <div class="topbar-title">Nueva parada</div>
-  </div>
-  <div class="detail-scroll" style="padding:16px; display:flex; flex-direction:column; gap:12px;">
-    <div>
-      <div class="section-label" style="margin-bottom:6px">Empresa / Cliente *</div>
-      <input id="manual-company" type="text" placeholder="Nombre de la tienda o cliente"
-        style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; color:var(--text); font-family:inherit; font-size:14px;">
-    </div>
-    <div>
-      <div class="section-label" style="margin-bottom:6px">Dirección</div>
-      <input id="manual-address" type="text" placeholder="Calle y número"
-        style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; color:var(--text); font-family:inherit; font-size:14px;">
-    </div>
-    <div style="display:flex; gap:8px;">
-      <div style="flex:0 0 90px;">
-        <div class="section-label" style="margin-bottom:6px">CP</div>
-        <input id="manual-cp" type="text" inputmode="numeric" maxlength="5" placeholder="29000"
-          style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; color:var(--text); font-family:inherit; font-size:14px;">
-      </div>
-      <div style="flex:1;">
-        <div class="section-label" style="margin-bottom:6px">Ciudad</div>
-        <input id="manual-city" type="text" placeholder="Málaga"
-          style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; color:var(--text); font-family:inherit; font-size:14px;">
+      {/* WIDGET OFICIAL — lista de partidos */}
+      <div style={{padding:"0 16px"}}>
+        {scriptReady ? (
+          <div style={{borderRadius:14,overflow:"hidden",border:`1px solid ${C.border}`}}>
+            <api-sports-widget
+              data-type="games"
+              data-date={dia==="hoy"?today:tomorrow}
+              data-league={LIGAS}
+              data-show-toolbar="true"
+              data-tab="all"
+              data-games-style="1"
+              data-refresh="60"
+              data-target-game="modal"
+            />
+          </div>
+        ) : (
+          <Card style={{textAlign:"center",padding:"40px 20px"}}>
+            <Spinner/> 
+            <div style={{fontSize:13,color:C.mid,marginTop:12}}>Cargando datos...</div>
+          </Card>
+        )}
       </div>
     </div>
-    <div>
-      <div class="section-label" style="margin-bottom:6px">Teléfono</div>
-      <input id="manual-phone" type="tel" placeholder="600000000"
-        style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; color:var(--text); font-family:inherit; font-size:14px;">
-    </div>
-    <div>
-      <div class="section-label" style="margin-bottom:6px">Nº Albarán</div>
-      <input id="manual-albaran" type="text" placeholder="626WEB000000 (opcional)"
-        style="width:100%; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:12px; color:var(--text); font-family:inherit; font-size:14px;">
-    </div>
-  </div>
-  <div style="padding:12px 16px 16px; background:var(--surface); border-top:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
-    <button class="btn btn-green" onclick="saveManualStop()">✅ Añadir parada</button>
-  </div>
-</div>
-
-<!-- ════════════ GESTIONAR SCREEN ════════════ -->
-<div class="screen" id="screen-gestionar">
-  <div class="topbar">
-    <button class="topbar-back" onclick="showScreen('screen-list')">←</button>
-    <div class="topbar-title">Gestionar paradas</div>
-  </div>
-  <div style="padding:12px 16px 8px; font-size:13px; color:var(--text2);">
-    Toca una parada para eliminarla de la ruta de hoy.
-  </div>
-  <div class="list-scroll" id="gestionar-list"></div>
-  <div style="padding:12px 16px 16px; background:var(--surface); border-top:1px solid var(--border);">
-    <button class="btn btn-ghost" style="color:var(--red);" onclick="confirmReset()">📄 Cargar nuevo PDF</button>
-  </div>
-</div>
-
-<!-- ════════════ MODAL BORRAR ════════════ -->
-<div id="modal-delete" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.75); z-index:100; align-items:flex-end; justify-content:center;">
-  <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px 16px 0 0; padding:20px 20px 32px; width:100%; max-width:480px;">
-    <div style="font-size:11px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.6px; margin-bottom:6px;">Eliminar parada</div>
-    <div id="modal-delete-name" style="font-size:17px; font-weight:800; color:var(--text); margin-bottom:4px;"></div>
-    <div id="modal-delete-city" style="font-size:13px; color:var(--text2); margin-bottom:16px;"></div>
-
-    <div style="font-size:12px; font-weight:700; color:var(--text3); text-transform:uppercase; letter-spacing:.6px; margin-bottom:8px;">Motivo de eliminación</div>
-    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;" id="modal-motivos">
-      <!-- generado por JS -->
-    </div>
-    <textarea id="modal-nota" placeholder="Nota adicional (opcional)…" rows="2"
-      style="width:100%; background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:10px; color:var(--text); font-family:inherit; font-size:13px; resize:none; margin-bottom:14px;"></textarea>
-
-    <div style="display:flex; gap:8px;">
-      <button class="btn btn-ghost" style="flex:1;" onclick="closeDeleteModal()">Cancelar</button>
-      <button class="btn" id="modal-confirm-btn" style="flex:1; background:var(--red); color:#fff;" onclick="confirmDeleteStop()">🗑 Eliminar</button>
-    </div>
-  </div>
-</div>
-
-<!-- ════════════ DETAIL SCREEN ════════════ -->
-<div class="screen" id="screen-detail">
-  <div class="topbar">
-    <button class="topbar-back" onclick="showScreen('screen-list')">←</button>
-    <div class="topbar-title" id="detail-topbar-title">Entrega</div>
-    <div class="topbar-badge" id="detail-topbar-badge"></div>
-  </div>
-  <div class="detail-scroll" id="detail-scroll">
-    <!-- filled by JS -->
-  </div>
-  <div class="action-bar" id="detail-actions">
-    <!-- filled by JS -->
-  </div>
-</div>
-
-<!-- ════════════ RESUMEN SCREEN ════════════ -->
-<div class="screen" id="screen-resumen">
-  <div class="topbar">
-    <button class="topbar-back" onclick="showScreen('screen-list')">←</button>
-    <div class="topbar-title">Resumen del día</div>
-  </div>
-  <div class="resumen-scroll" id="resumen-scroll"></div>
-  <button class="btn-export" onclick="exportarResumen()">📤 Exportar resumen</button>
-</div>
-
-<!-- ════════════ HISTORIAL SCREEN ════════════ -->
-<div class="screen" id="screen-historial">
-  <div class="topbar">
-    <button class="topbar-back" onclick="showScreen('screen-menu')">←</button>
-    <div class="topbar-title">Rutas anteriores</div>
-  </div>
-  <div class="list-scroll" id="historial-list"></div>
-</div>
-
-<!-- ════════════ FINALIZAR RUTA SCREEN ════════════ -->
-<div class="screen" id="screen-finalizar">
-  <div class="topbar">
-    <button class="topbar-back" onclick="showScreen('screen-list')">←</button>
-    <div class="topbar-title">Finalizar ruta</div>
-  </div>
-  <div class="detail-scroll" style="padding:20px 16px;">
-
-    <div style="text-align:center; padding:20px 0 24px;">
-      <div style="font-size:52px; margin-bottom:12px;">🏁</div>
-      <div style="font-size:20px; font-weight:800; margin-bottom:6px;">¡Ruta completada!</div>
-      <div style="font-size:14px; color:var(--text2); line-height:1.5;" id="finalizar-resumen-txt"></div>
-    </div>
-
-    <!-- KPIs finales -->
-    <div class="resumen-kpi" style="margin-bottom:20px;" id="finalizar-kpis"></div>
-
-    <!-- Aviso pendientes si los hay -->
-    <div id="finalizar-pendientes-aviso" style="display:none; background:#2a1515; border:1px solid var(--red); border-radius:10px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:var(--red);">
-      ⚠️ Aún hay paradas pendientes. Confirma todas las entregas antes de finalizar.
-    </div>
-
-    <!-- Subir Hoja de Ruta -->
-    <div style="margin-bottom:16px;">
-      <div class="section-label" style="margin-bottom:8px;">📋 Hoja de ruta firmada</div>
-      <div style="font-size:13px; color:var(--text2); margin-bottom:12px; line-height:1.5;">
-        Sube una foto o escaneo de la hoja de ruta firmada para completar el cierre del día.
-      </div>
-      <label id="hoja-upload-zone" style="
-        display:block; background:var(--surface); border:2px dashed var(--border);
-        border-radius:12px; padding:32px 16px; text-align:center; cursor:pointer;
-        transition:border-color .2s; position:relative;">
-        <input type="file" accept="image/*,application/pdf" onchange="hojaUploaded(this)" style="position:absolute; inset:0; opacity:0; cursor:pointer;">
-        <div style="font-size:32px; margin-bottom:8px;" id="hoja-icon">📄</div>
-        <div style="font-size:14px; font-weight:700; color:var(--text2);" id="hoja-label">Toca para subir</div>
-        <div style="font-size:12px; color:var(--text3); margin-top:4px;">Foto, imagen o PDF</div>
-      </label>
-    </div>
-
-  </div>
-  <div style="padding:12px 16px 24px; background:var(--surface); border-top:1px solid var(--border); display:flex; flex-direction:column; gap:8px;">
-    <button id="btn-cerrar-ruta" class="btn btn-green" onclick="cerrarRuta()" disabled style="opacity:.4; cursor:not-allowed;">
-      ✅ Cerrar ruta y guardar en historial
-    </button>
-    <button class="btn btn-ghost" onclick="showScreen('screen-list')">← Volver a la lista</button>
-  </div>
-</div>
-
-<!-- ════════════ HISTORIAL DETAIL SCREEN ════════════ -->
-<div class="screen" id="screen-historial-detail">
-  <div class="topbar">
-    <button class="topbar-back" onclick="showScreen('screen-historial')">←</button>
-    <div class="topbar-title" id="hd-title">Detalle ruta</div>
-  </div>
-  <div class="resumen-scroll" id="hd-content"></div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script>
-// ── CONFIG ──────────────────────────────────────────────────────────
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-let stops = [];
-let currentStopIdx = null;
-let routeName = ''; // nombre del PDF cargado sin extensión
-
-// ── SCREEN NAV ──────────────────────────────────────────────────────
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  if (id === 'screen-menu') updateMenu();
-  if (id === 'screen-list') renderList();
-  if (id === 'screen-resumen') renderResumen();
-  if (id === 'screen-detail') setTimeout(initSig, 50);
+  );
 }
 
-// ── TOAST ────────────────────────────────────────────────────────────
-let toastTimer;
-function toast(msg, type='') {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.className = 'toast show' + (type ? ' '+type : '');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
-}
+// ── PANTALLA: PREDICCIÓN (motor + widgets H2H/partido) ────────
+function PrediccionScreen({ partido, onBack, scriptReady }) {
+  const [home, setHome] = useState(partido?.home||"");
+  const [away, setAway] = useState(partido?.away||"");
+  const [homeId, setHomeId] = useState(partido?.homeId||"");
+  const [awayId, setAwayId] = useState(partido?.awayId||"");
+  const [fixtureId, setFixtureId] = useState(partido?.fixtureId||"");
+  const [loading, setLoading] = useState(false);
+  const [stage, setStage] = useState("");
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState(null);
+  const [tab, setTab] = useState("prediccion");
+  const [oddsH, setOddsH] = useState("");
+  const [oddsX, setOddsX] = useState("");
+  const [oddsA, setOddsA] = useState("");
+  const [bankroll, setBankroll] = useState("100");
 
-// ── PDF PARSING ──────────────────────────────────────────────────────
-async function loadPDF(input) {
-  if (!input.files.length) return;
-  const file = input.files[0];
-  // Capturar nombre sin extensión: "Malaga.pdf" → "Malaga"
-  routeName = file.name.replace(/\.pdf$/i, '').trim();
-  toast('Leyendo PDF…');
-  try {
-    const ab = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: ab }).promise;
-    let fullText = '';
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      const items = content.items.filter(it => it.str.trim());
-
-      // Sort by Y descending (top of page first), then X ascending (left to right)
-      // transform[4] = X, transform[5] = Y (PDF coords: Y=0 is bottom)
-      items.sort((a, b) => {
-        const dy = b.transform[5] - a.transform[5];
-        if (Math.abs(dy) > 3) return dy;           // different rows
-        return a.transform[4] - b.transform[4];    // same row: left first
-      });
-
-      // Group into lines by Y proximity
-      let lines = [];
-      let curLine = [];
-      let lastY = null;
-      for (const item of items) {
-        const y = item.transform[5];
-        if (lastY !== null && Math.abs(y - lastY) > 3) {
-          lines.push(curLine);
-          curLine = [];
-        }
-        curLine.push(item.str);
-        lastY = y;
-      }
-      if (curLine.length) lines.push(curLine);
-
-      fullText += lines.map(l => l.join(' ')).join('\n') + '\n';
-    }
-
-
-    stops = [];
-    stops = parsePDF(fullText);
-    if (stops.length === 0) {
-      toast('No se encontraron entregas en el PDF', 'warn');
-      console.warn('[RutaApp] 0 paradas. Texto completo:\n', fullText);
-      return;
-    }
-    saveState();
-    toast(`${stops.length} paradas cargadas ✓`, 'ok');
-    showScreen('screen-list');
-  } catch(e) {
-    toast('Error al leer el PDF', 'warn');
-    console.error(e);
-  }
-}
-
-function parsePDF(text) {
-  // ── CONFIRMED FORMAT (from console log) ─────────────────────────────
-  // Each store header is its own line:
-  //   "29006 MALAGA CENTRO DE REPARACIONES INFORMATICAS, S.L. (M) // 952363595 // LEDA, 15 //"
-  //   "29006 Málaga (VERACRUZ) GRUPO HRC HOME S.L. // 689284496-638433422 // VERACRUZ 23 POL IND. SAN LUIS08,45-11 //"
-  // Format: CP  CITY+COMPANY  //  PHONE  //  ADDRESS  //
-  //
-  // Doc lines:
-  //   "MASTER ELEC 626WEB042264F 282525 TV XIAOMI 55" A PRO 2026 UHD QLED GOOGLETV DOLBY *29006* 0-1-0 1"
-  // Format: MASTER ELEC  DOCNUM  PRODCODE(6)  NAME  *CP*  BULTOS  QTY
-  //   OR:   MASTER ELEC  DOCNUM  PRODCODE(6)  NAME  BULTOS  QTY   (no *CP*)
-  // ─────────────────────────────────────────────────────────────────────
-
-  const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  const stopMap   = new Map();
-  const stopOrder = [];
-  let currentKey  = null;
-
-  for (const line of lines) {
-    // ── Store header: starts with 5-digit CP ────────────────────────────
-    // e.g.: "29006 MALAGA CENTRO DE REPARACIONES INFORMATICAS, S.L. (M) // 952363595 // LEDA, 15 //"
-    const hm = line.match(/^(\d{5})\s+(.+?)\s*\/\/\s*([\d]{7,15}(?:[\-\/]\d+)?)\s*\/\/\s*(.+?)\s*\/\/\s*$/);
-    if (hm) {
-      const cp       = hm[1];
-      const nameRaw  = hm[2].trim();   // "MALAGA CENTRO DE REPARACIONES..." or "Málaga (VERACRUZ) GRUPO HRC HOME S.L."
-      const phone    = hm[3].trim().split(/[\-\/]/)[0]; // take first number if dual-phone
-      const address  = hm[4].trim();
-
-      // Split city vs company name
-      // City = first word(s) that are purely a place name
-      // Company starts at the first word that looks like a business name
-      const words = nameRaw.split(/\s+/);
-      let splitAt = 1; // default: first word is city
-
-      for (let i = 1; i < words.length; i++) {
-        const w = words[i];
-        // Known city suffixes that are still part of city name
-        if (/^\(/.test(w)) { splitAt = i + 2; continue; } // "(VERACRUZ)" → include in city
-        // Company-start triggers
-        if (/^(CENTRO|GRUPO|ELECTR|CONSUR|SECONSUR|CHOLLO|SAIL|BEZDADI|ARAUJO|BRAVO|HRC|IMAGEN)/i.test(w)) { splitAt = i; break; }
-        if (words[i-1].endsWith(',')) { splitAt = i; break; } // comma → company starts after
-        if (i >= 2 && /^[A-ZÁÉÍÓÚÑ]{4,}$/.test(w) && !/^(EL|LA|LOS|LAS|DE|DEL|SAN|SANTA)$/.test(w)) { splitAt = i; break; }
-      }
-
-      const city    = words.slice(0, splitAt).join(' ');
-      const company = words.slice(splitAt).join(' ') || nameRaw;
-
-      const key = cp + '_' + phone.replace(/\D/g,'').substring(0,9);
-      if (!stopMap.has(key)) {
-        stopMap.set(key, {
-          id: key, cp, city, company, phone, address,
-          docs: [], albaranSet: new Set(),
-          status: 'pending', incidentType: '', incidentNote: '',
-          photos: [], albaranPhotos: {}
-        });
-        stopOrder.push(key);
-      }
-      currentKey = key;
-      continue;
-    }
-
-    // ── Doc line: MASTER ELEC with 6-digit product code ─────────────────
-    // Real product: "MASTER ELEC 626WEB042264F 282525 TV XIAOMI... *29006* 0-1-0 1"
-    // Also without *CP*: "MASTER ELEC 626WEB042542 240016 SARTEN MONIX M481228 28CM GREEN 0-0-6 6"
-    if (line.startsWith('MASTER ELEC') && currentKey) {
-      // Match: MASTER ELEC  DOCNUM  6DIGIT_CODE  NAME  [*CP*]  BULTOS  QTY
-      const dm = line.match(/^MASTER ELEC\s+(626\w+)\s+(\d{6})\s+(.+?)\s+(?:\*\d{5}\*\s*)?[\d]+-[\d]+-[\d]+\s+(\d+)\s*$/);
-      if (dm) {
-        const stop = stopMap.get(currentKey);
-        const docNum   = dm[1];
-        const prodCode = dm[2];
-        const name     = dm[3].trim();
-        const qty      = parseInt(dm[4]);
-        if (!stop.docs.find(d => d.num === docNum && d.prodCode === prodCode)) {
-          stop.docs.push({ num: docNum, prodCode, name, qty });
-        }
-        stop.albaranSet.add(docNum);
-      }
-    }
-  }
-
-  // ── Finalize ──────────────────────────────────────────────────────────
-  const result = stopOrder.map(k => {
-    const s = stopMap.get(k);
-    s.albaranCount = s.albaranSet.size;
-    delete s.albaranSet;
-    return s;
-  }).filter(s => s.docs.length > 0);
-
-  console.log('[RutaApp] Resultado:', result.length, result.map(s => `${s.company} (${s.cp})`));
-  return result;
-}
-
-// ── FALLBACK PARSER ─────────────────────────────────────────────────────
-// If the main parser finds 0 headers, try a looser approach:
-// split text on *CP* markers and extract store info from surrounding context
-function parsePDFFallback(raw) {
-
-  const stopMap  = new Map();
-  const stopOrder = [];
-
-  // Find all *DDDDD* markers — these mark start of a store's first doc
-  const cpMarkerRegex = /\*(\d{5})\*/g;
-  let m;
-  const markers = [];
-  while ((m = cpMarkerRegex.exec(raw)) !== null) {
-    markers.push({ pos: m.index, cp: m[1] });
-  }
-
-  // Between each marker, extract the store header (COMPANY // PHONE // ADDRESS)
-  // which appears just before the marker in the raw text
-  for (let i = 0; i < markers.length; i++) {
-    const marker = markers[i];
-    const contextStart = Math.max(0, marker.pos - 300);
-    const context = raw.substring(contextStart, marker.pos + 20);
-
-    const hm = context.match(/([A-ZÁÉÍÓÚÑ][^\/]{3,60}?)\s*\/\/\s*([\d\-]{7,15})\s*\/\/\s*([^\/]{3,60}?)\s*\/\//i);
-    if (!hm) continue;
-
-    const company = hm[1].trim();
-    const phone   = hm[2].trim();
-    const address = hm[3].trim();
-    const cp      = marker.cp;
-
-    // City: appears right after address // in the raw text, before the next MASTER ELEC
-    const afterHeader = raw.substring(marker.pos - 50, marker.pos + 100);
-    const cityM = afterHeader.match(/\/\/\s*\d{5}\s+([A-ZÁÉÍÓÚÑ][^\n\*\/]{2,40}?)(?:\s+(?:MASTER|\*|\d{5}))/i);
-    const city = cityM ? cityM[1].trim() : cp;
-
-    const key = cp + '_' + phone.replace(/\D/g,'').substring(0,9);
-    if (!stopMap.has(key)) {
-      stopMap.set(key, {
-        id: key, cp, city, company, phone, address,
-        docs: [], albaranSet: new Set(),
-        status: 'pending', incidentType: '', incidentNote: '', photos: []
-      });
-      stopOrder.push(key);
-    }
-  }
-
-  // Extract docs
-  const docRegex = /MASTER ELEC\s+(626\w+)\s+(\d{5,6})\s+(.+?)\s+(\d{1,3})\s+(?:\*(\d{5})\*\s*)?(\d+-\d+-\d+)/g;
-  while ((m = docRegex.exec(raw)) !== null) {
-    if (m[2].length < 6) continue;
-    const doc = { pos: m.index, docNum: m[1], prodCode: m[2], name: m[3].trim(), qty: parseInt(m[4]), cp: m[5]||null };
-    if (!doc.cp) continue;
-    const candidates = stopOrder.filter(k => stopMap.get(k).cp === doc.cp);
-    if (!candidates.length) continue;
-    let targetKey = candidates[0];
-    if (candidates.length > 1) {
-      let bestKey = null, bestDist = Infinity;
-      for (const k of candidates) {
-        const phone = stopMap.get(k).phone.replace(/\D/g,'').substring(0,9);
-        let sp = 0, p;
-        while ((p = raw.indexOf(phone, sp)) !== -1) {
-          if (p < doc.pos && (doc.pos - p) < bestDist) { bestDist = doc.pos - p; bestKey = k; }
-          sp = p + 1;
-        }
-      }
-      if (bestKey) targetKey = bestKey;
-    }
-    const stop = stopMap.get(targetKey);
-    if (!stop.docs.find(d => d.num === doc.docNum && d.prodCode === doc.prodCode)) {
-      stop.docs.push({ num: doc.docNum, prodCode: doc.prodCode, name: doc.name, qty: doc.qty });
-    }
-    stop.albaranSet.add(doc.docNum);
-  }
-
-  return stopOrder.map(k => {
-    const s = stopMap.get(k);
-    s.albaranCount = s.albaranSet.size;
-    delete s.albaranSet;
-    return s;
-  }).filter(s => s.docs.length > 0);
-}
-
-// ── DEMO DATA ────────────────────────────────────────────────────────
-function loadDemo() {
-  routeName = 'Demo — Málaga';
-  stops = [
-    {
-      id: '29006_MALAGA_CENTRO',
-      cp: '29006', city: 'MÁLAGA', company: 'MÁLAGA CENTRO DE REPARACIONES INFORMÁTICAS, S.L.',
-      phone: '952363595', address: 'LEDA, 15',
-      docs: [
-        { num: '626WEB042264F', prodCode: '282525', name: 'TV XIAOMI 55" A PRO 2026 UHD QLED GOOGLETV DOLBY', qty: 1 },
-        { num: '626WEB042267F', prodCode: '275873', name: 'TV HAIER 65" H65S80EUX UHD QLED GOOGLE TV BT PEANA', qty: 1 },
-      ],
-      status: 'pending', incidentType: '', incidentNote: '', photos: []
-    },
-    {
-      id: '29006_GRUPO_HRC',
-      cp: '29006', city: 'MÁLAGA (VERACRUZ)', company: 'GRUPO HRC HOME S.L.',
-      phone: '689284496', address: 'VERACRUZ 23 POL IND. SAN LUIS',
-      docs: [
-        { num: '626WEB042542', prodCode: '240014', name: 'SARTEN MONIX M481224 24CM GREEN', qty: 6 },
-        { num: '626WEB042542', prodCode: '240016', name: 'SARTEN MONIX M481228 28CM GREEN', qty: 6 },
-        { num: '626WEB042777', prodCode: '282597', name: 'FRI. ARTICA AFEA17783F460I 177x84', qty: 1 },
-        { num: '626WEB042777', prodCode: '249885', name: 'FRI. HOOVER HHSBSO6174XWD 177x90 NF INOX', qty: 1 },
-        { num: '626PEV002442', prodCode: '266070', name: 'HORNO ARTICA AHB7008W MF 70L BLANCO', qty: 1 },
-      ],
-      status: 'pending', incidentType: '', incidentNote: '', photos: []
-    },
-    {
-      id: '29006_SAIL',
-      cp: '29006', city: 'MÁLAGA', company: 'SAIL BEZDADI, WALID',
-      phone: '647348698', address: 'C/ PAQUIROS, 12, A',
-      docs: [
-        { num: '626WEB041522F', prodCode: '284853', name: 'TV SAMSUNG 65" TQ65S85F UHD OLED SMART TV 120HZ', qty: 1 },
-      ],
-      status: 'pending', incidentType: '', incidentNote: '', photos: []
-    },
-    {
-      id: '29120_ELECTROIMAGEN',
-      cp: '29120', city: 'ALHAURÍN EL GRANDE', company: 'ELECTROIMAGEN BRAVO MARIN, S.L.',
-      phone: '952490171', address: 'CRUZ 23',
-      docs: [
-        { num: '626WEB042639', prodCode: '290571', name: 'CIRCULADOR ARTICA AVI120W20 120W 50CM', qty: 1 },
-        { num: '626WEB042639', prodCode: '280648', name: 'ACON.SPLIT DAITSU DS09KTP4 WIFI A++/A+', qty: 4 },
-        { num: '626WEB043198', prodCode: '256242', name: 'MANDO A DISTANCIA DCU PARA AIRE ACONDIC.', qty: 7 },
-      ],
-      status: 'pending', incidentType: '', incidentNote: '', photos: []
-    },
-    {
-      id: '29640_ELECTRICA_ARAUJO',
-      cp: '29640', city: 'LOS BOLICHES', company: 'ELECTRICA ARAUJO, S.A.',
-      phone: '952473110', address: 'CALLE IGLESIA, 16 BIS',
-      docs: [
-        { num: '626WEB040779F', prodCode: '291320', name: 'ALTAVOZ MINI JBL GO 4 BLUETOOTH BLUE', qty: 1 },
-        { num: '626WEB041247F', prodCode: '205591', name: 'TELEFONO SOBREMESA ALCATEL T06 ULTRA SLIM', qty: 1 },
-        { num: '626WEB042371F', prodCode: '283039', name: 'TV SAMSUNG 55" TQ55Q7F5 UHD QLED SMARTTV IA', qty: 1 },
-      ],
-      status: 'pending', incidentType: '', incidentNote: '', photos: []
-    },
-    {
-      id: '29670_SECONSUR',
-      cp: '29670', city: 'SAN PEDRO DE ALCÁNTARA', company: 'SECONSUR DEL SOL, S.L.',
-      phone: '952927495', address: 'AVDA. PABLO RUIZ PICASSO, EDF.FERROMAN LOCAL 3-4',
-      docs: [
-        { num: '626WEB042262F', prodCode: '168369', name: 'CAFET. DELONGHI EN80.B NESPRESSO INISSIA NEGRA', qty: 5 },
-        { num: '626WEB042339F', prodCode: '259504', name: 'FRICOM. HISENSE RB372N4ACE 179x60x59 NF INOX', qty: 1 },
-        { num: '626WEB043157', prodCode: '267123', name: 'FRICOM. HOOVER HOCT3L517EW2 177x55 BLANCO', qty: 1 },
-      ],
-      status: 'pending', incidentType: '', incidentNote: '', photos: []
-    },
-    {
-      id: '29680_ELECTROCHOLLO',
-      cp: '29680', city: 'ESTEPONA', company: 'ELECTROCHOLLO SUR',
-      phone: '951621674', address: 'AVDA ESPAÑA 218-220',
-      docs: [
-        { num: '626PEV002421', prodCode: '267694', name: 'FRI. HISENSE RS818N4TIE1 179x91x73 NF DISP INOX', qty: 1 },
-      ],
-      status: 'pending', incidentType: '', incidentNote: '', photos: []
-    },
+  const tabs = [
+    {id:"prediccion", label:"Predicción"},
+    {id:"partido",    label:"Partido"},
+    {id:"h2h",        label:"H2H"},
   ];
-  saveState();
-  toast(`${stops.length} entregas cargadas ✓`, 'ok');
-  showScreen('screen-list');
-}
 
-// ── RENDER LIST ──────────────────────────────────────────────────────
-function renderList() {
-  const now = new Date();
-  document.getElementById('list-date').textContent = now.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
-  document.getElementById('list-title').textContent = routeName || 'Entregas del día';
+  const analyze = async () => {
+    if(!home.trim()||!away.trim()){setError("Escribe los dos equipos");return;}
+    setError(null);setLoading(true);setResult(null);setTab("prediccion");
+    try {
+      setStage("🤖 Analizando con IA...");
+      const ai = await callClaude(home, away);
+      setStage("🎲 Monte Carlo 20k iteraciones...");
+      await new Promise(r=>setTimeout(r,200));
+      const lH = Math.max(0.4, Math.min(3.5,
+        (ai.attackStrength?.home||1.3) * (ai.defenseStrength?.away||1.1) * (ai.homeAdvantage||1.1)
+      ));
+      const lA = Math.max(0.4, Math.min(3.5,
+        (ai.attackStrength?.away||1.0) * (ai.defenseStrength?.home||1.0)
+      ));
+      const eng = runEngine(lH, lA);
+      setResult({ai, eng, home, away, lH, lA});
+      setStage("");
+    } catch(e){
+      setError("Error al analizar. Inténtalo de nuevo.");
+    } finally { setLoading(false); }
+  };
 
-  const done = stops.filter(s => s.status === 'done').length;
-  const inc  = stops.filter(s => s.status === 'incident').length;
-  const pend = stops.filter(s => s.status === 'pending').length;
+  useEffect(()=>{ if(home&&away) analyze(); },[]);
 
-  document.getElementById('list-stats').innerHTML = `
-    <div class="stat-pill"><div class="dot dot-green"></div>${done} entregadas</div>
-    ${inc ? `<div class="stat-pill"><div class="dot dot-amber"></div>${inc} incidencias</div>` : ''}
-    <div class="stat-pill"><div class="dot dot-gray"></div>${pend} pendientes</div>
-  `;
+  const inp = {width:"100%",background:C.panel,border:`1px solid ${C.border}`,borderRadius:10,padding:"12px 14px",color:C.text,fontSize:15,outline:"none"};
+  const tabBtn = (t) => ({flex:1,padding:"9px 4px",borderRadius:8,border:"none",background:tab===t?`${C.accent}18`:"transparent",color:tab===t?C.accent:C.mid,fontSize:12,fontWeight:600,cursor:"pointer"});
 
-  const scroll = document.getElementById('list-scroll');
-  const query = (document.getElementById('search-input')?.value || '').toLowerCase();
-  scroll.innerHTML = stops.map((s, i) => {
-    if (query && !s.company.toLowerCase().includes(query) && !s.cp.includes(query) && !s.city.toLowerCase().includes(query)) return '';
-    const icon = s.status === 'done' ? '✅' : s.status === 'incident' ? '⚠️' : '📦';
-    const uniqueDocs = [...new Set(s.docs.map(d => d.num))];
-    const timeBadge = s.deliveredAt ? `<span class="stop-time-badge">${s.deliveredAt}</span>` : '';
-    return `
-      <div class="stop-card ${s.status}" id="stop-card-${i}" draggable="true"
-           ondragstart="dragStart(event,${i})" ondragover="dragOver(event,${i})" ondrop="dragDrop(event,${i})" ondragend="dragEnd(event)">
-        <div class="stop-top">
-          <div class="drag-handle" title="Arrastrar para reordenar">⠿</div>
-          <div class="stop-num">${i+1}</div>
-          <div class="stop-info" onclick="openStop(${i})" style="cursor:pointer;">
-            <div class="stop-name">${s.company}${timeBadge}</div>
-            <div class="stop-city">${s.cp} — ${s.city}</div>
-            <div class="stop-addr">${s.address}</div>
-          </div>
-          <div style="display:flex; align-items:center; gap:2px; flex-shrink:0;">
-            ${s.phone ? `<a class="stop-call-btn" href="tel:${s.phone}" onclick="event.stopPropagation()" title="Llamar">📞</a>` : ''}
-            <div class="stop-status" onclick="openStop(${i})" style="cursor:pointer;">${icon}</div>
-          </div>
+  return (
+    <div style={{paddingBottom:80}}>
+      {/* Header */}
+      <div style={{padding:"16px 16px 12px",display:"flex",alignItems:"center",gap:12}}>
+        <button onClick={onBack} style={{background:"none",border:"none",color:C.mid,fontSize:22,cursor:"pointer",padding:0}}>←</button>
+        <div>
+          <div style={{fontSize:17,fontWeight:800}}>{home&&away?`${home} vs ${away}`:"Predictor"}</div>
+          {partido&&<div style={{fontSize:12,color:C.mid}}>{partido.grupo} · {partido.fecha}</div>}
         </div>
-        <div class="stop-docs" onclick="openStop(${i})" style="cursor:pointer;">
-          ${uniqueDocs.slice(0,4).map(d => `<div class="doc-tag">${d}</div>`).join('')}
-          ${uniqueDocs.length > 4 ? `<div class="doc-tag">+${uniqueDocs.length-4}</div>` : ''}
-        </div>
-        <div class="stop-bultos" onclick="openStop(${i})" style="cursor:pointer;">${s.albaranCount||uniqueDocs.length} albarán${(s.albaranCount||uniqueDocs.length)!==1?'es':''}</div>
       </div>
-    `;
-  }).join('');
+
+      <div style={{padding:"0 16px"}}>
+        {/* Inputs */}
+        <Card style={{marginBottom:12}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 22px 1fr",gap:8,alignItems:"center",marginBottom:10}}>
+            <input style={inp} placeholder="🏠 Equipo local" value={home} onChange={e=>setHome(e.target.value)}/>
+            <div style={{textAlign:"center",color:C.low,fontSize:11,fontWeight:700}}>vs</div>
+            <input style={inp} placeholder="✈️ Visitante" value={away} onChange={e=>setAway(e.target.value)}/>
+          </div>
+          <button onClick={analyze} disabled={loading} style={{
+            width:"100%",padding:13,borderRadius:10,border:"none",
+            cursor:loading?"not-allowed":"pointer",
+            background:loading?C.border:`linear-gradient(135deg,${C.accent},#0099BB)`,
+            color:loading?C.mid:"#07090F",fontWeight:800,fontSize:14,
+            display:"flex",alignItems:"center",justifyContent:"center",gap:10,
+          }}>
+            {loading?<><Spinner/>{stage}</>:"⚡ Predecir"}
+          </button>
+          {error&&<div style={{marginTop:10,padding:"10px 12px",borderRadius:8,background:`${C.red}15`,border:`1px solid ${C.red}35`,color:C.red,fontSize:13}}>⚠️ {error}</div>}
+        </Card>
+
+        {/* Tabs */}
+        {(result || fixtureId || (homeId && awayId)) && (
+          <div style={{display:"flex",gap:4,background:C.card,padding:4,borderRadius:10,border:`1px solid ${C.border}`,marginBottom:12}}>
+            {tabs.map(t=>(
+              <button key={t.id} onClick={()=>setTab(t.id)} style={tabBtn(t.id)}>{t.label}</button>
+            ))}
+          </div>
+        )}
+
+        {/* ── TAB: PREDICCIÓN ── */}
+        {tab==="prediccion" && result && (
+          <div style={{display:"flex",flexDirection:"column",gap:12,animation:"fadeUp 0.3s ease"}}>
+
+            {/* 1X2 */}
+            <Card glow>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
+                {[
+                  {l:"1 LOCAL",p:result.eng.prob.h,c:C.green,ci:result.eng.ci?.h},
+                  {l:"X EMPATE",p:result.eng.prob.d,c:C.amber,ci:result.eng.ci?.d},
+                  {l:"2 VISIT.",p:result.eng.prob.a,c:C.accent,ci:result.eng.ci?.a},
+                ].map(({l,p,c,ci})=>(
+                  <div key={l} style={{background:C.panel,borderRadius:10,padding:"10px 8px",textAlign:"center"}}>
+                    <div style={{fontSize:9,color:C.low,fontWeight:700,letterSpacing:"0.06em",marginBottom:4}}>{l}</div>
+                    <div style={{fontSize:28,fontWeight:900,color:c,fontFamily:C.mono,lineHeight:1}}>{Math.round(p*100)}%</div>
+                    <div style={{fontSize:11,color:C.low,marginTop:3}}>{(1/p).toFixed(2)}</div>
+                    <div style={{fontSize:9,color:C.low,marginTop:2}}>±{ci?(ci*100).toFixed(1):"—"}pts (IC 95%)</div>
+                    <div style={{marginTop:6}}><Bar value={p} color={c}/></div>
+                  </div>
+                ))}
+              </div>
+              <div style={{textAlign:"center"}}>
+                <Pill color={result.ai.confidence>=70?C.green:result.ai.confidence>=50?C.amber:C.red}>
+                  CONFIANZA {result.ai.confidence||"—"}%
+                </Pill>
+              </div>
+            </Card>
+
+            {/* Análisis narrativo */}
+            {result.ai.narrative&&(
+              <Card>
+                <Sec>Análisis para apostar</Sec>
+                <p style={{fontSize:14,color:C.mid,lineHeight:1.65}}>{result.ai.narrative}</p>
+              </Card>
+            )}
+
+            {/* Factores clave */}
+            {result.ai.keyFactors?.length>0&&(
+              <Card>
+                <Sec>Factores clave</Sec>
+                {result.ai.keyFactors.map((f,i)=>(
+                  <div key={i} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"8px 0",borderBottom:`1px solid ${C.border}20`}}>
+                    <span style={{fontFamily:C.mono,fontSize:11,fontWeight:700,color:C.accent,flexShrink:0}}>0{i+1}</span>
+                    <span style={{fontSize:13,color:C.text,lineHeight:1.5}}>{f}</span>
+                  </div>
+                ))}
+              </Card>
+            )}
+
+            {/* Goles */}
+            <Card>
+              <Sec>Mercados de goles</Sec>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+                <div style={{background:C.panel,borderRadius:10,padding:12,textAlign:"center"}}>
+                  <div style={{fontSize:10,color:C.low,marginBottom:3}}>{result.home} xG</div>
+                  <div style={{fontSize:28,fontWeight:900,color:C.accent,fontFamily:C.mono}}>{result.eng.xg.h.toFixed(2)}</div>
+                </div>
+                <div style={{background:C.panel,borderRadius:10,padding:12,textAlign:"center"}}>
+                  <div style={{fontSize:10,color:C.low,marginBottom:3}}>{result.away} xG</div>
+                  <div style={{fontSize:28,fontWeight:900,color:C.purple,fontFamily:C.mono}}>{result.eng.xg.a.toFixed(2)}</div>
+                </div>
+              </div>
+              {[
+                {l:"Over 2.5 goles",p:result.eng.ou25,c:C.green},
+                {l:"Under 2.5 goles",p:1-result.eng.ou25,c:C.red},
+                {l:"Over 1.5 goles",p:result.eng.ou15,c:C.green},
+                {l:"Ambos marcan — Sí",p:result.eng.bt,c:C.purple},
+                {l:"Ambos marcan — No",p:1-result.eng.bt,c:C.mid},
+              ].map(({l,p,c})=>(
+                <div key={l} style={{marginBottom:11}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                    <span style={{fontSize:13,color:C.text}}>{l}</span>
+                    <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                      <span style={{fontSize:11,color:C.low}}>cuota {(1/p).toFixed(2)}</span>
+                      <span style={{fontFamily:C.mono,fontWeight:700,color:c,fontSize:14}}>{Math.round(p*100)}%</span>
+                    </div>
+                  </div>
+                  <Bar value={p} color={c} h={6}/>
+                </div>
+              ))}
+            </Card>
+
+            {/* Mercados avanzados: córners, tarjetas, tiros, faltas, posesión */}
+            <Card>
+              <Sec>Mercados avanzados (IA + Poisson)</Sec>
+              <AdvRow label="⚐ Córners" color={C.accent}
+                home={result.ai.expectedCorners?.home} away={result.ai.expectedCorners?.away}
+                ouLine={9.5} ouLambdaTotal={(result.ai.expectedCorners?.home??5)+(result.ai.expectedCorners?.away??4.5)} />
+              <AdvRow label="🟨 Tarjetas amarillas" color={C.amber}
+                home={result.ai.expectedCards?.home} away={result.ai.expectedCards?.away}
+                ouLine={4.5} ouLambdaTotal={(result.ai.expectedCards?.home??2)+(result.ai.expectedCards?.away??2.2)} />
+              <AdvRow label="🎯 Tiros a puerta" color={C.green}
+                home={result.ai.expectedShotsOnTarget?.home} away={result.ai.expectedShotsOnTarget?.away}
+                ouLine={8.5} ouLambdaTotal={(result.ai.expectedShotsOnTarget?.home??5)+(result.ai.expectedShotsOnTarget?.away??4)} />
+              <AdvRow label="🥾 Tiros totales" color={C.purple}
+                home={result.ai.expectedShots?.home} away={result.ai.expectedShots?.away}
+                ouLine={24.5} ouLambdaTotal={(result.ai.expectedShots?.home??12)+(result.ai.expectedShots?.away??10)} />
+              <AdvRow label="⚠️ Faltas" color={C.mid}
+                home={result.ai.expectedFouls?.home} away={result.ai.expectedFouls?.away}
+                ouLine={22.5} ouLambdaTotal={(result.ai.expectedFouls?.home??11)+(result.ai.expectedFouls?.away??11)} />
+
+              <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0",borderTop:`1px solid ${C.border}50`,marginBottom:6}}>
+                <span style={{fontSize:13,color:C.text}}>🟥 Prob. alguna tarjeta roja</span>
+                <span style={{fontFamily:C.mono,fontWeight:800,color:C.red}}>
+                  {Math.round(Math.min(1,(result.ai.redCardProb?.home??0.04)+(result.ai.redCardProb?.away??0.04))*100)}%
+                </span>
+              </div>
+
+              <div style={{marginTop:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.low,marginBottom:4}}>
+                  <span>{result.home} {Math.round(result.ai.possession?.home??52)}%</span>
+                  <span>{Math.round(result.ai.possession?.away??48)}% {result.away}</span>
+                </div>
+                <div style={{display:"flex",height:8,borderRadius:4,overflow:"hidden"}}>
+                  <div style={{width:`${result.ai.possession?.home??52}%`,background:C.accent}}/>
+                  <div style={{flex:1,background:C.purple}}/>
+                </div>
+              </div>
+              <div style={{fontSize:10,color:C.low,marginTop:10,lineHeight:1.5}}>
+                Líneas O/U sobre Poisson agregado (lambda local+visitante). Estimaciones base de la IA, no datos en vivo del partido.
+              </div>
+            </Card>
+
+            {/* Marcadores */}
+            <Card>
+              <Sec>Marcadores más probables</Sec>
+              <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+                {result.eng.top.map((s,i)=>(
+                  <div key={i} style={{
+                    background:i===0?`${C.accent}18`:C.panel,
+                    border:`1px solid ${i===0?C.accent+"50":C.border}`,
+                    borderRadius:10,padding:"8px 14px",textAlign:"center",minWidth:60,
+                  }}>
+                    <div style={{fontFamily:C.mono,fontWeight:800,fontSize:18,color:i===0?C.accent:C.text}}>{s.h}-{s.a}</div>
+                    <div style={{fontSize:11,color:C.low,marginTop:2}}>{(s.p*100).toFixed(1)}%</div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Value bets (IA) */}
+            {result.ai.valueBets?.length>0&&(
+              <Card>
+                <Sec>Value Bets detectadas</Sec>
+                {result.ai.valueBets.map((vb,i)=>(
+                  <div key={i} style={{
+                    padding:"12px",marginBottom:8,borderRadius:10,
+                    background:C.panel,
+                    borderLeft:`3px solid ${vb.edge==="alta"?C.green:vb.edge==="media"?C.amber:C.mid}`,
+                  }}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                      <div>
+                        <div style={{fontSize:10,color:C.low}}>{vb.market}</div>
+                        <div style={{fontSize:15,fontWeight:800,color:C.text}}>{vb.pick}</div>
+                      </div>
+                      <Pill color={vb.edge==="alta"?C.green:vb.edge==="media"?C.amber:C.mid}>
+                        {vb.edge?.toUpperCase()}
+                      </Pill>
+                    </div>
+                    <p style={{fontSize:12,color:C.mid,lineHeight:1.5}}>{vb.reason}</p>
+                  </div>
+                ))}
+              </Card>
+            )}
+
+            {/* Calculadora de valor / EV / Kelly con cuotas reales */}
+            <Card>
+              <Sec>Calculadora de valor (introduce cuotas reales)</Sec>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
+                <input style={inp} placeholder="Cuota 1" value={oddsH} onChange={e=>setOddsH(e.target.value)} inputMode="decimal"/>
+                <input style={inp} placeholder="Cuota X" value={oddsX} onChange={e=>setOddsX(e.target.value)} inputMode="decimal"/>
+                <input style={inp} placeholder="Cuota 2" value={oddsA} onChange={e=>setOddsA(e.target.value)} inputMode="decimal"/>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+                <span style={{fontSize:12,color:C.mid,whiteSpace:"nowrap"}}>Bankroll (€)</span>
+                <input style={{...inp,flex:1}} value={bankroll} onChange={e=>setBankroll(e.target.value)} inputMode="decimal"/>
+              </div>
+              {[
+                {label:"1 Local",prob:result.eng.prob.h,odd:oddsH,c:C.green},
+                {label:"X Empate",prob:result.eng.prob.d,odd:oddsX,c:C.amber},
+                {label:"2 Visitante",prob:result.eng.prob.a,odd:oddsA,c:C.accent},
+              ].map(({label,prob,odd,c})=>{
+                const r = evCalc(prob, odd);
+                if(!r) return (
+                  <div key={label} style={{fontSize:12,color:C.low,padding:"8px 0",borderTop:`1px solid ${C.border}30`}}>{label}: introduce la cuota para calcular</div>
+                );
+                const bk = parseFloat(bankroll)||0;
+                return (
+                  <div key={label} style={{padding:"10px 0",borderTop:`1px solid ${C.border}30`}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                      <span style={{fontSize:13,fontWeight:700,color:C.text}}>{label}</span>
+                      <Pill color={r.edge>0.03?C.green:r.edge>0?C.amber:C.red}>
+                        {r.edge>=0?"+":""}{(r.edge*100).toFixed(1)}% edge
+                      </Pill>
+                    </div>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:C.mid}}>
+                      <span>EV: {r.ev>=0?"+":""}{(r.ev*100).toFixed(1)}% / unidad</span>
+                      <span>Stake: <b style={{color:c}}>{(r.kelly*bk).toFixed(2)}€</b> ({(r.kelly*100).toFixed(1)}%)</span>
+                    </div>
+                  </div>
+                );
+              })}
+              <div style={{fontSize:11,color:C.low,marginTop:10,lineHeight:1.5}}>
+                Stake calculado con medio-Kelly (conservador), capado al 25% del bankroll. No es asesoramiento financiero — apostar conlleva riesgo real de pérdida de dinero.
+              </div>
+            </Card>
+
+            {/* Goleadores */}
+            {result.ai.scorers?.length>0&&(
+              <Card>
+                <Sec>Probable goleador</Sec>
+                {result.ai.scorers.map((s,i)=>(
+                  <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"9px 0",borderBottom:`1px solid ${C.border}20`}}>
+                    <div style={{width:32,height:32,borderRadius:"50%",background:`${s.team==="home"?C.accent:C.purple}20`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:s.team==="home"?C.accent:C.purple,flexShrink:0}}>{s.name?.[0]}</div>
+                    <div style={{flex:1}}>
+                      <div style={{fontSize:13,fontWeight:600,color:C.text}}>{s.name}</div>
+                      <div style={{fontSize:11,color:C.low}}>{s.team==="home"?result.home:result.away}</div>
+                      <div style={{marginTop:4}}><Bar value={s.prob} color={s.team==="home"?C.accent:C.purple} h={4}/></div>
+                    </div>
+                    <div style={{fontFamily:C.mono,fontWeight:800,fontSize:17,color:s.team==="home"?C.accent:C.purple}}>{Math.round(s.prob*100)}%</div>
+                  </div>
+                ))}
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* ── TAB: PARTIDO (widget oficial) ── */}
+        {tab==="partido" && (
+          <div style={{animation:"fadeUp 0.3s ease"}}>
+            {fixtureId && scriptReady ? (
+              <div style={{borderRadius:14,overflow:"hidden",border:`1px solid ${C.border}`}}>
+                <api-sports-widget
+                  data-type="game"
+                  data-game-id={fixtureId}
+                  data-game-tab="statistics"
+                  data-refresh="30"
+                />
+              </div>
+            ) : (
+              <Card style={{textAlign:"center",padding:"32px 20px"}}>
+                <div style={{fontSize:32,marginBottom:12}}>🔍</div>
+                <div style={{fontSize:14,color:C.mid,marginBottom:8}}>Introduce el ID del fixture</div>
+                <div style={{fontSize:12,color:C.low,marginBottom:16}}>Encuéntralo en la lista de partidos</div>
+                <input
+                  style={{...inp, marginBottom:10}}
+                  placeholder="ej. 1035443"
+                  value={fixtureId}
+                  onChange={e=>setFixtureId(e.target.value)}
+                />
+              </Card>
+            )}
+          </div>
+        )}
+
+        {/* ── TAB: H2H (widget oficial) ── */}
+        {tab==="h2h" && (
+          <div style={{animation:"fadeUp 0.3s ease"}}>
+            {homeId && awayId && scriptReady ? (
+              <div style={{borderRadius:14,overflow:"hidden",border:`1px solid ${C.border}`}}>
+                <api-sports-widget
+                  data-type="h2h"
+                  data-h2h={`${homeId}-${awayId}`}
+                  data-target-game="modal"
+                />
+              </div>
+            ) : (
+              <Card style={{textAlign:"center",padding:"32px 20px"}}>
+                <div style={{fontSize:32,marginBottom:12}}>📊</div>
+                <div style={{fontSize:14,color:C.mid,marginBottom:8}}>Introduce los IDs de equipos</div>
+                <div style={{fontSize:12,color:C.low,marginBottom:16}}>IDs de API-Football (ej. Real Madrid = 541)</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:10}}>
+                  <input style={inp} placeholder="ID local" value={homeId} onChange={e=>setHomeId(e.target.value)}/>
+                  <input style={inp} placeholder="ID visitante" value={awayId} onChange={e=>setAwayId(e.target.value)}/>
+                </div>
+                <div style={{fontSize:11,color:C.low}}>Real Madrid=541 · Barcelona=529 · España=9 · Argentina=26</div>
+              </Card>
+            )}
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
 }
 
-function filterList(q) { renderList(); }
+// ── PANTALLA: STANDINGS ───────────────────────────────────────
+function StandingsScreen({ scriptReady }) {
+  const LIGAS = [
+    {id:1,   name:"🏆 Mundial 2026"},
+    {id:140, name:"🇪🇸 La Liga"},
+    {id:39,  name:"🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League"},
+    {id:78,  name:"🇩🇪 Bundesliga"},
+    {id:135, name:"🇮🇹 Serie A"},
+    {id:61,  name:"🇫🇷 Ligue 1"},
+    {id:2,   name:"⭐ Champions League"},
+  ];
+  const [liga, setLiga] = useState(1);
 
-const MOTIVOS = [
-  'No se ha cargado/facturado',
-  'No cabe en el camión',
-  'Cliente canceló',
-  'Dirección incorrecta',
-  'Ya entregado antes',
-  'Fuera de ruta',
-  'Otro'
+  return (
+    <div style={{paddingBottom:80}}>
+      <div style={{padding:"20px 16px 14px"}}>
+        <div style={{fontSize:22,fontWeight:800,letterSpacing:"-0.02em"}}>Clasificaciones</div>
+        <div style={{fontSize:13,color:C.mid,marginTop:2}}>Datos reales en tiempo real</div>
+      </div>
+
+      {/* Selector liga */}
+      <div style={{padding:"0 16px 14px",display:"flex",gap:6,overflowX:"auto",paddingBottom:10}}>
+        {LIGAS.map(l=>(
+          <button key={l.id} onClick={()=>setLiga(l.id)} style={{
+            flexShrink:0,padding:"8px 12px",borderRadius:8,
+            border:`1px solid ${liga===l.id?C.accent+"40":C.border}`,
+            background:liga===l.id?`${C.accent}15`:C.card,
+            color:liga===l.id?C.accent:C.mid,fontSize:12,fontWeight:600,cursor:"pointer",
+            whiteSpace:"nowrap",
+          }}>{l.name}</button>
+        ))}
+      </div>
+
+      <div style={{padding:"0 16px"}}>
+        {scriptReady ? (
+          <div style={{borderRadius:14,overflow:"hidden",border:`1px solid ${C.border}`}}>
+            <api-sports-widget
+              data-type="standings"
+              data-league={liga}
+              data-season="2026"
+              data-target-team="modal"
+            />
+          </div>
+        ) : (
+          <Card style={{textAlign:"center",padding:"40px 20px"}}>
+            <Spinner/>
+            <div style={{fontSize:13,color:C.mid,marginTop:12}}>Cargando...</div>
+          </Card>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── APP ───────────────────────────────────────────────────────
+const NAV = [
+  {id:"partidos", icon:"⚽", label:"Partidos"},
+  {id:"predictor",icon:"⚡", label:"Predecir"},
+  {id:"tabla",    icon:"📊", label:"Tabla"},
 ];
-function openGestionar() {
-  const list = document.getElementById('gestionar-list');
-  list.innerHTML = stops.map((s, i) => {
-    const icon = s.status === 'done' ? '✅' : s.status === 'incident' ? '⚠️' : '📦';
-    const uniqueDocs = [...new Set(s.docs.map(d => d.num))];
-    return `
-      <div onclick="openDeleteModal(${i})" style="
-        background:var(--surface); border:1px solid var(--border);
-        border-radius:12px; margin:0 12px 10px; padding:14px;
-        cursor:pointer; active:opacity:.8;">
-        <div style="display:flex; align-items:flex-start; gap:10px; margin-bottom:8px;">
-          <div style="
-            width:28px; height:28px; border-radius:8px; flex-shrink:0;
-            background:var(--surface2); border:1px solid var(--border);
-            display:flex; align-items:center; justify-content:center;
-            font-size:12px; font-weight:800; color:var(--text2);">${i+1}</div>
-          <div style="flex:1; min-width:0;">
-            <div style="font-size:14px; font-weight:700; color:var(--text); line-height:1.3;">${s.company}</div>
-            <div style="font-size:12px; color:var(--text2); margin-top:2px;">${s.cp} — ${s.city}</div>
-            <div style="font-size:11px; color:var(--text2); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${s.address}</div>
-          </div>
-          <div style="font-size:18px; flex-shrink:0;">${icon}</div>
-        </div>
-        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
-          ${uniqueDocs.slice(0,3).map(d => `
-            <div style="background:var(--surface2); border-radius:6px; padding:3px 8px;
-              font-size:10px; font-weight:600; color:var(--text2); font-family:monospace;">${d}</div>
-          `).join('')}
-          ${uniqueDocs.length > 3 ? `<div style="background:var(--surface2); border-radius:6px; padding:3px 8px; font-size:10px; font-weight:600; color:var(--text2);">+${uniqueDocs.length-3}</div>` : ''}
-        </div>
-        <div style="font-size:12px; font-weight:700; color:var(--red);">Toca para eliminar →</div>
-      </div>
-    `;
-  }).join('') || '<div style="padding:32px; text-align:center; color:var(--text3);">No hay paradas cargadas</div>';
-  showScreen('screen-gestionar');
-}
 
-function openDeleteModal(idx) {
-  deleteTargetIdx = idx;
-  const s = stops[idx];
-  document.getElementById('modal-delete-name').textContent = s.company;
-  document.getElementById('modal-delete-city').textContent = `${s.cp} — ${s.city}`;
-  document.getElementById('modal-nota').value = '';
+function App() {
+  const [screen, setScreen] = useState("partidos");
+  const [selectedMatch, setSelectedMatch] = useState(null);
+  const scriptReady = useApiSportsScript();
 
-  // Generate chips dynamically
-  const container = document.getElementById('modal-motivos');
-  container.innerHTML = MOTIVOS.map(m =>
-    `<div class="motivo-chip" onclick="selectMotivo(this)" data-motivo="${m}">${m}</div>`
-  ).join('');
-
-  document.getElementById('modal-delete').style.display = 'flex';
-}
-
-function selectMotivo(chip) {
-  document.querySelectorAll('.motivo-chip').forEach(c => c.classList.remove('selected'));
-  chip.classList.add('selected');
-}
-
-function closeDeleteModal() {
-  document.getElementById('modal-delete').style.display = 'none';
-  deleteTargetIdx = null;
-}
-
-function confirmDeleteStop() {
-  if (deleteTargetIdx === null) return;
-  const motivo = document.querySelector('.motivo-chip.selected')?.dataset?.motivo || '';
-  const nota   = document.getElementById('modal-nota').value.trim();
-  if (!motivo) { toast('Selecciona un motivo', 'warn'); return; }
-
-  const s = stops[deleteTargetIdx];
-  // Log the deletion reason (could save to history later)
-  console.info(`[RutaApp] Parada eliminada: ${s.company} | Motivo: ${motivo}${nota ? ' — ' + nota : ''}`);
-
-  stops.splice(deleteTargetIdx, 1);
-  saveState();
-  closeDeleteModal();
-  toast(`"${s.company}" eliminada`, 'ok');
-  openGestionar(); // refresh the list
-}
-
-// ── OPEN STOP ────────────────────────────────────────────────────────
-function openStop(idx) {
-  currentStopIdx = idx;
-  const s = stops[idx];
-  if (!s.albaranPhotos) s.albaranPhotos = {};
-
-  document.getElementById('detail-topbar-title').textContent = `Parada ${idx+1}`;
-  document.getElementById('detail-topbar-badge').textContent = s.cp;
-
-  // Status badge
-  let badgeHtml = '';
-  if (s.status === 'done')          badgeHtml = `<div class="status-badge badge-done">✅ Entregado</div>`;
-  else if (s.status === 'incident') badgeHtml = `<div class="status-badge badge-incident">⚠️ Incidencia</div>`;
-  else                              badgeHtml = `<div class="status-badge badge-pending">📦 Pendiente</div>`;
-
-  // Group products by albaran number
-  const albaranMap = new Map();
-  for (const d of s.docs) {
-    if (!albaranMap.has(d.num)) albaranMap.set(d.num, []);
-    const arr = albaranMap.get(d.num);
-    if (!arr.find(x => x.prodCode === d.prodCode)) arr.push(d);
-  }
-  const albaranNums = [...albaranMap.keys()];
-
-  // Build albaran sections with their own camera button
-  const albaranSectionsHtml = albaranNums.map((num, ai) => {
-    const products = albaranMap.get(num);
-    const photos   = s.albaranPhotos[num] || [];
-    const inputId  = `photo-input-${ai}`;
-    const safeName = num.replace(/[^a-zA-Z0-9]/g, '_');
-
-    const photosHtml = photos.length ? `
-      <div class="photo-preview" style="margin-top:8px">
-        ${photos.map((p, pi) => `
-          <div class="photo-thumb">
-            <img src="${p}" alt="">
-            <button class="photo-thumb-remove" onclick="removePhoto('${num}',${pi})">✕</button>
-          </div>
-        `).join('')}
-      </div>` : '';
-
-    return `
-      <div class="albaran-block">
-        <div class="albaran-header">
-          <div class="albaran-num">${num}</div>
-          <label class="albaran-cam-btn" for="${inputId}">
-            📷 ${photos.length > 0 ? photos.length + ' foto' + (photos.length > 1 ? 's' : '') : 'Foto'}
-          </label>
-          <input type="file" id="${inputId}" accept="image/*" capture="environment"
-            onchange="addPhoto(this,'${num}')" style="display:none">
-        </div>
-        ${photosHtml}
-      </div>
-    `;
-  }).join('');
-
-  document.getElementById('detail-scroll').innerHTML = `
-    ${badgeHtml}
-
-    <div class="detail-address-card">
-      <div class="label">Cliente</div>
-      <div class="detail-company">${s.company}</div>
-      <div class="detail-addr-line">📍 ${s.address}</div>
-      <div class="detail-addr-line">📮 ${s.cp} — ${s.city}</div>
-      ${s.phone ? `<a class="detail-phone" href="tel:${s.phone}">📞 ${s.phone}</a>` : ''}
-      ${(s.address || s.city) ? `
-        <a class="btn-maps" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((s.address + ' ' + s.cp + ' ' + s.city).trim())}" target="_blank">
-          🗺 Ir aquí — Google Maps
-        </a>` : ''}
-    </div>
-
-    <div class="docs-section">
-      <div class="section-label">Albaranes (${albaranNums.length})</div>
-      ${albaranSectionsHtml}
-    </div>
-
-    <div class="incident-section ${s.status === 'incident' ? 'open' : ''}" id="incident-section">
-      <div class="section-label">Tipo de incidencia</div>
-      <div class="incident-types">
-        ${['Tienda cerrada','No había nadie','Rechazó mercancía','Falta producto','Dirección incorrecta','Otro'].map(t => `
-          <div class="incident-type ${s.incidentType===t?'selected':''}" onclick="selectIncidentType('${t}')">${t}</div>
-        `).join('')}
-      </div>
-      <textarea class="incident-textarea" id="incident-note" placeholder="Notas adicionales (opcional)…" rows="3">${s.incidentNote||''}</textarea>
-    </div>
-
-    <div class="docs-section">
-      <div class="section-label">📝 Nota de la parada</div>
-      <textarea class="note-textarea" id="stop-note" placeholder="Observaciones, instrucciones de entrega…" rows="3" onchange="saveNote(this.value)">${s.note||''}</textarea>
-    </div>
-
-    <div class="docs-section" id="sig-section">
-      <div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
-        <span>✍️ Firma del cliente</span>
-        <button onclick="clearSig()" style="background:none;border:none;color:var(--text3);font-size:11px;font-weight:600;cursor:pointer;">Borrar</button>
-      </div>
-      <canvas class="sig-canvas" id="sig-canvas" height="140"></canvas>
-      ${s.signature ? '<div style="font-size:11px;color:var(--green);margin-top:6px;">✅ Firma guardada</div>' : '<div style="font-size:11px;color:var(--text3);margin-top:6px;">Dibuja la firma del cliente</div>'}
-    </div>
-  `;
-
-  // Action bar
-  let actionsHtml = '';
-  const hasPhotos = s.albaranPhotos && Object.values(s.albaranPhotos).some(arr => arr && arr.length > 0);
-  if (s.status === 'pending') {
-    actionsHtml = `
-      ${!hasPhotos ? `<div style="background:#2a1515; border:1px solid #FF444455; border-radius:8px; padding:9px 12px; font-size:12px; color:var(--red); font-weight:600; text-align:center; margin-bottom:0;">📷 Añade foto del albarán para poder confirmar</div>` : ''}
-      <button class="btn btn-green" onclick="markDone()" style="${!hasPhotos ? 'opacity:.45;' : ''}">✅ Marcar como entregado</button>
-      <button class="btn btn-amber" onclick="openIncident()" style="${!hasPhotos ? 'opacity:.45;' : ''}">⚠️ Registrar incidencia</button>
-    `;
-  } else if (s.status === 'done') {
-    actionsHtml = `
-      <div class="btn-row">
-        <button class="btn btn-ghost" onclick="undoStatus()">↩ Deshacer</button>
-        <button class="btn btn-ghost" onclick="showScreen('screen-list')">← Volver</button>
-      </div>
-    `;
-  } else if (s.status === 'incident') {
-    actionsHtml = `
-      <button class="btn btn-amber" onclick="saveIncident()">💾 Guardar incidencia</button>
-      <div class="btn-row" style="margin-top:0">
-        <button class="btn btn-ghost" onclick="undoStatus()">↩ Deshacer</button>
-        <button class="btn btn-ghost" onclick="showScreen('screen-list')">← Volver</button>
-      </div>
-    `;
-  }
-  document.getElementById('detail-actions').innerHTML = actionsHtml;
-
-  showScreen('screen-detail');
-}
-
-// ── ACTIONS ──────────────────────────────────────────────────────────
-function hasPhotoRequirement() {
-  // Returns true if the current stop has at least one photo on any albaran
-  const s = stops[currentStopIdx];
-  if (!s.albaranPhotos) return false;
-  return Object.values(s.albaranPhotos).some(arr => arr && arr.length > 0);
-}
-
-function markDone() {
-  if (!hasPhotoRequirement()) {
-    toast('📷 Añade foto del albarán antes de marcar entregado', 'warn');
-    // Scroll to photos section
-    const firstPhoto = document.querySelector('.albaran-cam-btn');
-    if (firstPhoto) firstPhoto.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    return;
-  }
-  const now = new Date();
-  stops[currentStopIdx].status = 'done';
-  stops[currentStopIdx].deliveredAt = now.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
-  saveState();
-  toast('Entrega registrada ✓', 'ok');
-  if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
-  // auto advance to next pending
-  const nextPending = stops.findIndex((s, i) => i > currentStopIdx && s.status === 'pending');
-  if (nextPending !== -1) {
-    setTimeout(() => openStop(nextPending), 600);
-  } else {
-    setTimeout(() => showScreen('screen-list'), 600);
-  }
-}
-
-function openIncident() {
-  if (!hasPhotoRequirement()) {
-    toast('📷 Añade foto del albarán antes de registrar incidencia', 'warn');
-    const firstPhoto = document.querySelector('.albaran-cam-btn');
-    if (firstPhoto) firstPhoto.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    return;
-  }
-  stops[currentStopIdx].status = 'incident';
-  document.getElementById('incident-section').classList.add('open');
-  document.getElementById('detail-actions').innerHTML = `
-    <button class="btn btn-amber" onclick="saveIncident()">💾 Guardar incidencia</button>
-    <div class="btn-row" style="margin-top:0">
-      <button class="btn btn-ghost" onclick="undoStatus()">↩ Cancelar</button>
-    </div>
-  `;
-  document.getElementById('incident-section').scrollIntoView({ behavior: 'smooth' });
-}
-
-function selectIncidentType(type) {
-  stops[currentStopIdx].incidentType = type;
-  document.querySelectorAll('.incident-type').forEach(el => {
-    el.classList.toggle('selected', el.textContent === type);
-  });
-}
-
-function saveIncident() {
-  const note = document.getElementById('incident-note')?.value || '';
-  stops[currentStopIdx].incidentNote = note;
-  stops[currentStopIdx].status = 'incident';
-  saveState();
-  toast('Incidencia guardada ⚠️', 'warn');
-  setTimeout(() => showScreen('screen-list'), 600);
-}
-
-function undoStatus() {
-  stops[currentStopIdx].status = 'pending';
-  stops[currentStopIdx].incidentType = '';
-  stops[currentStopIdx].incidentNote = '';
-  saveState();
-  openStop(currentStopIdx);
-}
-
-function addPhoto(input, albaranNum) {
-  if (!input.files.length) return;
-  const file = input.files[0];
-  const reader = new FileReader();
-  reader.onload = e => {
-    const s = stops[currentStopIdx];
-    if (!s.albaranPhotos) s.albaranPhotos = {};
-    if (!s.albaranPhotos[albaranNum]) s.albaranPhotos[albaranNum] = [];
-    s.albaranPhotos[albaranNum].push(e.target.result);
-    // Keep backward compat
-    s.photos = Object.values(s.albaranPhotos).flat();
-    saveState();
-    openStop(currentStopIdx);
-    toast('Foto añadida ✓', 'ok');
+  const goPredict = (partido) => {
+    setSelectedMatch(partido);
+    setScreen("predictor");
   };
-  reader.readAsDataURL(file);
-}
 
-function removePhoto(albaranNum, photoIdx) {
-  const s = stops[currentStopIdx];
-  if (!s.albaranPhotos || !s.albaranPhotos[albaranNum]) return;
-  s.albaranPhotos[albaranNum].splice(photoIdx, 1);
-  s.photos = Object.values(s.albaranPhotos).flat();
-  saveState();
-  openStop(currentStopIdx);
-}
+  return (
+    <>
+      <style>{css}</style>
+      <div style={{minHeight:"100vh",background:C.bg,maxWidth:480,margin:"0 auto"}}>
 
-// ── RESUMEN ──────────────────────────────────────────────────────────
-function renderResumen() {
-  const done = stops.filter(s => s.status === 'done').length;
-  const inc  = stops.filter(s => s.status === 'incident').length;
-  const pend = stops.filter(s => s.status === 'pending').length;
-  const totalDocs = stops.reduce((a, s) => a + [...new Set(s.docs.map(d => d.num))].length, 0);
+        {/* Config widget (una vez, siempre presente) */}
+        {scriptReady && <ApiConfig/>}
 
-  document.getElementById('resumen-scroll').innerHTML = `
-    <div class="resumen-kpi">
-      <div class="kpi-box green"><div class="num">${done}</div><div class="lbl">Entregadas</div></div>
-      <div class="kpi-box amber"><div class="num">${inc}</div><div class="lbl">Incidencias</div></div>
-      <div class="kpi-box blue"><div class="num">${stops.length}</div><div class="lbl">Total paradas</div></div>
-      <div class="kpi-box gray"><div class="num">${pend}</div><div class="lbl">Pendientes</div></div>
-    </div>
+        {/* Screens */}
+        {screen==="partidos" && <PartidosScreen onPredict={goPredict} scriptReady={scriptReady}/>}
+        {screen==="predictor" && <PrediccionScreen partido={selectedMatch} onBack={()=>setScreen("partidos")} scriptReady={scriptReady}/>}
+        {screen==="tabla" && <StandingsScreen scriptReady={scriptReady}/>}
 
-    <div class="section-label" style="margin-bottom:10px">Detalle por parada</div>
-    ${stops.map((s, i) => {
-      const icon = s.status === 'done' ? '✅' : s.status === 'incident' ? '⚠️' : '📦';
-      const stClass = s.status === 'done' ? 'st-ok' : s.status === 'incident' ? 'st-inc' : 'st-pend';
-      const stText  = s.status === 'done' ? 'Entregado' : s.status === 'incident' ? (s.incidentType || 'Incidencia') : 'Pendiente';
-      return `
-        <div class="resumen-list-item">
-          <div class="ico">${icon}</div>
-          <div>
-            <div class="name">${s.company}</div>
-            <div style="font-size:11px;color:var(--text3)">${s.cp} — ${s.city}</div>
-          </div>
-          <div class="st ${stClass}">${stText}</div>
+        {/* Nav inferior */}
+        <div style={{
+          position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",
+          width:"100%",maxWidth:480,
+          background:`${C.card}F5`,backdropFilter:"blur(20px)",
+          borderTop:`1px solid ${C.border}`,
+          display:"flex",zIndex:100,
+          paddingBottom:"env(safe-area-inset-bottom)",
+        }}>
+          {NAV.map(({id,icon,label})=>(
+            <button key={id} onClick={()=>{
+              if(id==="predictor"){goPredict(null);}
+              else setScreen(id);
+            }} style={{
+              flex:1,padding:"10px 4px",border:"none",background:"transparent",
+              cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:3,
+            }}>
+              <span style={{fontSize:20}}>{icon}</span>
+              <span style={{fontSize:10,fontWeight:600,color:screen===id||(id==="predictor"&&screen==="predictor")?C.accent:C.low}}>
+                {label}
+              </span>
+              {(screen===id||(id==="predictor"&&screen==="predictor"))&&
+                <div style={{width:16,height:2,borderRadius:1,background:C.accent}}/>
+              }
+            </button>
+          ))}
         </div>
-      `;
-    }).join('')}
-  `;
-}
-
-function exportarResumen() {
-  const now = new Date();
-  const fecha = now.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-  const hora  = now.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
-  const done  = stops.filter(s => s.status === 'done').length;
-  const inc   = stops.filter(s => s.status === 'incident').length;
-  const pend  = stops.filter(s => s.status === 'pending').length;
-  const nombre = routeName || 'Ruta';
-
-  let txt = `INFORME DE RUTA — ${nombre.toUpperCase()}\n`;
-  txt += `Fecha: ${fecha} · Hora: ${hora}\n`;
-  txt += `${'═'.repeat(45)}\n\n`;
-  txt += `RESUMEN:\n`;
-  txt += `  ✅ Entregadas:  ${done}\n`;
-  txt += `  ⚠️  Incidencias: ${inc}\n`;
-  txt += `  ⏳ Pendientes:  ${pend}\n`;
-  txt += `  📦 Total:       ${stops.length}\n\n`;
-  txt += `${'─'.repeat(45)}\n`;
-  txt += `DETALLE PARADAS:\n\n`;
-
-  stops.forEach((s, i) => {
-    const st = s.status === 'done'
-      ? `✅ ENTREGADO${s.deliveredAt ? ' (' + s.deliveredAt + ')' : ''}`
-      : s.status === 'incident'
-        ? `⚠️  INCIDENCIA: ${s.incidentType || 'Sin tipo'}`
-        : '⏳ PENDIENTE';
-    txt += `${String(i+1).padStart(2,'0')}. ${s.company}\n`;
-    txt += `    CP: ${s.cp}  Ciudad: ${s.city}\n`;
-    txt += `    Dir: ${s.address}\n`;
-    if (s.phone) txt += `    Tel: ${s.phone}\n`;
-    txt += `    Estado: ${st}\n`;
-    if (s.note) txt += `    Nota: ${s.note}\n`;
-    if (s.incidentNote) txt += `    Incidencia: ${s.incidentNote}\n`;
-    const albs = [...new Set(s.docs.map(d => d.num))];
-    if (albs.length) txt += `    Albaranes: ${albs.join(', ')}\n`;
-    txt += '\n';
-  });
-
-  txt += `${'─'.repeat(45)}\n`;
-  txt += `Generado por RutaApp\n`;
-
-  const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const fileDate = now.toLocaleDateString('es-ES').replace(/\//g,'-');
-  a.href = url; a.download = `informe_${nombre}_${fileDate}.txt`;
-  a.click();
-  toast('Informe exportado ✓', 'ok');
-}
-
-// ── RESET ────────────────────────────────────────────────────────────
-function confirmReset() {
-  stops = [];
-  routeName = '';
-  localStorage.removeItem('rutaapp_stops');
-  localStorage.removeItem('rutaapp_routename');
-  const fi = document.querySelector('#screen-upload input[type=file]');
-  if (fi) fi.value = '';
-  showScreen('screen-menu');
-}
-
-// ── PERSISTENCE ──────────────────────────────────────────────────────
-function saveState() {
-  try {
-    // Save without photos to avoid quota issues, photos stay in memory
-    const toSave = stops.map(s => ({...s, photos: []}));
-    localStorage.setItem('rutaapp_stops', JSON.stringify(toSave));
-    localStorage.setItem('rutaapp_routename', routeName);
-  } catch(e) {}
-}
-
-function loadState() {
-  try {
-    const saved = localStorage.getItem('rutaapp_stops');
-    if (saved) stops = JSON.parse(saved);
-    routeName = localStorage.getItem('rutaapp_routename') || '';
-  } catch(e) {}
-  showScreen('screen-menu');
-}
-
-function openManualAdd() {
-  // Clear fields
-  ['company','address','cp','city','phone','albaran'].forEach(f => {
-    const el = document.getElementById('manual-' + f);
-    if (el) el.value = '';
-  });
-  showScreen('screen-manual');
-}
-
-function saveManualStop() {
-  const company = document.getElementById('manual-company').value.trim();
-  if (!company) { toast('El nombre es obligatorio', 'warn'); return; }
-
-  const address = document.getElementById('manual-address').value.trim();
-  const cp      = document.getElementById('manual-cp').value.trim();
-  const city    = document.getElementById('manual-city').value.trim();
-  const phone   = document.getElementById('manual-phone').value.trim();
-  const albaran = document.getElementById('manual-albaran').value.trim();
-
-  const newDoc = albaran ? [{
-    num: albaran, prodCode: '000000',
-    name: 'Ver albarán físico', qty: 1
-  }] : [];
-
-  stops.push({
-    id: `manual_${Date.now()}`,
-    cp, city, company, phone, address,
-    docs: newDoc,
-    albaranCount: newDoc.length,
-    status: 'pending', incidentType: '', incidentNote: '',
-    photos: [], albaranPhotos: {}
-  });
-
-  saveState();
-  toast(`${company} añadida ✓`, 'ok');
-  showScreen('screen-list');
-}
-
-// ── SCAN / IA ────────────────────────────────────────────────────────
-let scanPages = []; // array of base64 images
-
-function openScan() {
-  scanPages = [];
-  document.getElementById('scan-pages').innerHTML = '';
-  document.getElementById('scan-result-msg').innerHTML = '';
-  document.getElementById('scan-process-btn').style.display = 'none';
-  showScreen('screen-scan');
-}
-
-function addScanPage(input) {
-  if (!input.files.length) return;
-  const file = input.files[0];
-  const reader = new FileReader();
-  reader.onload = e => {
-    const b64 = e.target.result; // data:image/jpeg;base64,...
-    scanPages.push(b64);
-    renderScanPages();
-    input.value = '';
-  };
-  reader.readAsDataURL(file);
-}
-
-function removeScanPage(idx) {
-  scanPages.splice(idx, 1);
-  renderScanPages();
-}
-
-function renderScanPages() {
-  const container = document.getElementById('scan-pages');
-  container.innerHTML = scanPages.map((b64, i) => `
-    <div class="scan-page-card">
-      <img src="${b64}" alt="Página ${i+1}">
-      <div class="scan-page-label">
-        <span>Página ${i+1}</span>
-        <button class="scan-page-remove" onclick="removeScanPage(${i})">✕</button>
       </div>
-    </div>
-  `).join('');
-  document.getElementById('scan-process-btn').style.display = scanPages.length > 0 ? 'block' : 'none';
+    </>
+  );
 }
 
-async function processScan() {
-  if (scanPages.length === 0) return;
-
-  const btn = document.getElementById('scan-process-btn');
-  btn.textContent = '⏳ Analizando…';
-  btn.disabled = true;
-  document.getElementById('scan-result-msg').innerHTML = '';
-
-  try {
-    const prompt = `Eres un asistente que extrae datos de albaranes de reparto de electrodomésticos (MASTER ELEC, MASTER CADENA, DISSER, etc.).
-
-Analiza todas las imágenes y extrae CADA entrega/cliente que encuentres.
-
-REGLAS IMPORTANTES para la dirección:
-1. Si en el albarán aparece "ENVIO:" o "ENVÍO:" — usa SIEMPRE esa dirección como dirección de entrega. Es la dirección física donde hay que entregar.
-2. Si NO aparece "ENVIO:", usa la dirección que aparece en la parte derecha del albarán (datos del cliente/destinatario).
-3. NUNCA uses la dirección del remitente (esquina superior izquierda, que es la del almacén o empresa emisora).
-
-Para CADA entrega devuelve un objeto con:
-- company: nombre del destinatario real (el que aparece junto a ENVIO, o el nombre del cliente derecha)
-- address: dirección de entrega (de ENVIO si existe, si no la del cliente)
-- cp: código postal de la dirección de entrega (5 dígitos)
-- city: ciudad de la dirección de entrega
-- phone: teléfono del destinatario (si aparece, si no "")
-- albaran: número de albarán o factura (ej: 626WEB042264F, 626R0016314, 026R0157268)
-- products: array de strings con los productos (descripción breve)
-
-Devuelve SOLO un array JSON válido, sin texto adicional, sin markdown, sin explicaciones.
-Ejemplo: [{"company":"Francisco Javier Márquez Flores","address":"Urb. Vistalmar Duquesa Sur Bloque 3 Puerta 19J","cp":"29692","city":"MANILVA","phone":"609223361","albaran":"026R0157268","products":["TV LED EVO MINI"]}]
-
-Si hay varias páginas, combina todos los datos en un solo array.
-Si una página tiene varios albaranes, crea una entrada por albarán.`;
-
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer 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'
-      },
-      body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-        max_tokens: 2000,
-        messages: [{
-          role: 'user',
-          content: [
-            ...scanPages.map(b64 => ({
-              type: 'image_url',
-              image_url: { url: b64 }
-            })),
-            { type: 'text', text: prompt }
-          ]
-        }]
-      })
-    });
-
-    const data = await response.json();
-    const rawText = (data.choices?.[0]?.message?.content || '').trim();
-
-    // Parse JSON response
-    const clean = rawText.replace(/^```json|^```|```$/gm, '').trim();
-    let extracted;
-    try { extracted = JSON.parse(clean); }
-    catch(e) {
-      showScanResult('No se pudo leer la respuesta de la IA. Inténtalo de nuevo.', 'warn');
-      return;
-    }
-
-    if (!Array.isArray(extracted) || extracted.length === 0) {
-      showScanResult('La IA no encontró entregas en las imágenes.', 'warn');
-      return;
-    }
-
-    // ── Merge: only add what's new ──────────────────────────────────
-    let added = 0, skipped = 0;
-
-    for (const item of extracted) {
-      const albaran = (item.albaran || '').trim();
-      const company = (item.company || '').trim();
-      if (!company) continue;
-
-      // Check if this albaran already exists in any stop
-      const albaranExists = albaran && stops.some(s =>
-        s.docs && s.docs.some(d => d.num === albaran)
-      );
-
-      if (albaranExists) { skipped++; continue; }
-
-      // Check if this company already exists (by name similarity or CP)
-      const cp = (item.cp || '').trim();
-      const existingStop = stops.find(s =>
-        s.company.toLowerCase().includes(company.toLowerCase().substring(0, 8)) ||
-        (cp && s.cp === cp && s.company.toLowerCase().includes(company.toLowerCase().substring(0, 5)))
-      );
-
-      const newDoc = albaran ? [{
-        num: albaran,
-        prodCode: '000000',
-        name: (item.products || []).join(', ') || 'Ver albarán físico',
-        qty: 1
-      }] : [];
-
-      if (existingStop) {
-        // Add albaran to existing stop
-        if (albaran && !existingStop.docs.find(d => d.num === albaran)) {
-          existingStop.docs.push(...newDoc);
-          existingStop.albaranCount = (existingStop.albaranCount || 0) + 1;
-          added++;
-        } else {
-          skipped++;
-        }
-      } else {
-        // New stop entirely
-        stops.push({
-          id: `scan_${Date.now()}_${added}`,
-          cp, city: item.city || '', company,
-          phone: item.phone || '', address: item.address || '',
-          docs: newDoc,
-          albaranCount: newDoc.length,
-          status: 'pending', incidentType: '', incidentNote: '',
-          photos: [], albaranPhotos: {}
-        });
-        added++;
-      }
-    }
-
-    saveState();
-
-    if (added > 0) {
-      showScanResult(`✅ ${added} entrega${added > 1 ? 's' : ''} nueva${added > 1 ? 's' : ''} añadida${added > 1 ? 's' : ''}${skipped > 0 ? ` · ${skipped} ya existían` : ''}`, 'ok');
-      setTimeout(() => showScreen('screen-list'), 2000);
-    } else {
-      showScanResult(`Todo ya estaba en la ruta (${skipped} encontradas, ninguna nueva).`, 'warn');
-    }
-
-  } catch(e) {
-    showScanResult('Error al conectar con la IA. Comprueba tu conexión.', 'warn');
-    console.error(e);
-  } finally {
-    btn.textContent = '✨ Procesar con IA';
-    btn.disabled = false;
-  }
-}
-
-function showScanResult(msg, type) {
-  const el = document.getElementById('scan-result-msg');
-  el.innerHTML = `<div class="scan-result ${type}">${msg}</div>`;
-}
-
-// ── MENÚ PRINCIPAL ───────────────────────────────────────────────────
-function updateMenu() {
-  // Fecha y hora
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
-  const dateStr = now.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
-  const dtEl = document.getElementById('menu-datetime');
-  if (dtEl) dtEl.textContent = `${timeStr} · ${dateStr.charAt(0).toUpperCase() + dateStr.slice(1)}`;
-
-  // Botón ruta actual
-  const btnActual = document.getElementById('menu-btn-actual');
-  if (btnActual) {
-    if (stops.length > 0) {
-      btnActual.style.display = 'block';
-      const done = stops.filter(s => s.status === 'done').length;
-      const inc  = stops.filter(s => s.status === 'incident').length;
-      const pend = stops.filter(s => s.status === 'pending').length;
-      const sub = document.getElementById('menu-ruta-actual-sub');
-      if (sub) sub.textContent = `${routeName ? routeName + ' · ' : ''}${done} entregadas · ${inc} incidencias · ${pend} pendientes`;
-    } else {
-      btnActual.style.display = 'none';
-    }
-  }
-
-  // Stats grid
-  const grid = document.getElementById('menu-stats-grid');
-  if (grid) {
-    if (stops.length > 0) {
-      const done = stops.filter(s => s.status === 'done').length;
-      const pend = stops.filter(s => s.status === 'pending').length;
-      const inc2 = stops.filter(s => s.status === 'incident').length;
-      grid.innerHTML = `
-        <div style="background:var(--surface); border:1px solid var(--border); border-top:3px solid var(--green); border-radius:12px; padding:14px; text-align:center;">
-          <div style="font-size:28px; font-weight:800; color:var(--green); line-height:1;">${done}</div>
-          <div style="font-size:10px; font-weight:700; color:var(--text2); margin-top:4px; text-transform:uppercase; letter-spacing:.5px;">Entregadas</div>
-        </div>
-        <div style="background:var(--surface); border:1px solid var(--border); border-top:3px solid var(--red); border-radius:12px; padding:14px; text-align:center;">
-          <div style="font-size:28px; font-weight:800; color:var(--red); line-height:1;">${inc2}</div>
-          <div style="font-size:10px; font-weight:700; color:var(--text2); margin-top:4px; text-transform:uppercase; letter-spacing:.5px;">Incidencias</div>
-        </div>
-        <div style="background:var(--surface); border:1px solid var(--border); border-top:3px solid var(--amber); border-radius:12px; padding:14px; text-align:center;">
-          <div style="font-size:28px; font-weight:800; color:var(--amber); line-height:1;">${pend}</div>
-          <div style="font-size:10px; font-weight:700; color:var(--text2); margin-top:4px; text-transform:uppercase; letter-spacing:.5px;">Pendientes</div>
-        </div>
-        <div style="background:var(--surface); border:1px solid var(--border); border-top:3px solid var(--blue); border-radius:12px; padding:14px; text-align:center;">
-          <div style="font-size:28px; font-weight:800; color:var(--blue); line-height:1;">${stops.length}</div>
-          <div style="font-size:10px; font-weight:700; color:var(--text2); margin-top:4px; text-transform:uppercase; letter-spacing:.5px;">Total</div>
-        </div>
-      `;
-    } else {
-      grid.innerHTML = '';
-    }
-  }
-
-  // Historial sub
-  const hist = getHistorial();
-  const subHist = document.getElementById('menu-historial-sub');
-  if (subHist) {
-    subHist.textContent = hist.length > 0
-      ? `${hist.length} ruta${hist.length > 1 ? 's' : ''} guardada${hist.length > 1 ? 's' : ''}`
-      : 'Sin rutas anteriores';
-  }
-}
-
-setInterval(updateMenu, 30000);
-
-// ── HISTORIAL ─────────────────────────────────────────────────────────
-function getHistorial() {
-  try {
-    return JSON.parse(localStorage.getItem('rutaapp_historial') || '[]');
-  } catch(e) { return []; }
-}
-
-function saveHistorial(hist) {
-  try { localStorage.setItem('rutaapp_historial', JSON.stringify(hist)); } catch(e) {}
-}
-
-function openHistorial() {
-  const hist = getHistorial();
-  const list = document.getElementById('historial-list');
-  if (hist.length === 0) {
-    list.innerHTML = `
-      <div style="padding:60px 24px; text-align:center;">
-        <div style="font-size:48px; margin-bottom:12px;">🗂️</div>
-        <div style="font-size:16px; font-weight:700; color:var(--text2); margin-bottom:6px;">Sin rutas anteriores</div>
-        <div style="font-size:13px; color:var(--text3);">Las rutas finalizadas aparecerán aquí</div>
-      </div>`;
-  } else {
-    list.innerHTML = hist.slice().reverse().map((r, i) => {
-      const realIdx = hist.length - 1 - i;
-      const done = r.stops.filter(s => s.status === 'done').length;
-      const inc  = r.stops.filter(s => s.status === 'incident').length;
-      return `
-        <div onclick="openHistorialDetail(${i})" style="background:var(--surface); border:1px solid var(--border); border-radius:12px; margin:10px 12px; padding:14px; cursor:pointer; active:opacity:.8;">
-          <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
-            <div style="font-size:16px; font-weight:800; flex:1; color:var(--accent);">${r.nombre || r.fecha}</div>
-            <div style="font-size:11px; font-weight:700; color:var(--text3);">${r.stops.length} paradas ›</div>
-          </div>
-          <div style="font-size:11px; color:var(--text2); margin-bottom:6px;">📅 ${r.fecha}</div>
-          <div style="display:flex; gap:8px; margin-bottom:10px;">
-            <div style="background:var(--surface2); border-radius:20px; padding:4px 10px; font-size:11px; font-weight:700; color:var(--green);">✅ ${done} entregadas</div>
-            ${inc > 0 ? `<div style="background:var(--surface2); border-radius:20px; padding:4px 10px; font-size:11px; font-weight:700; color:var(--amber);">⚠️ ${inc} incidencias</div>` : ''}
-          </div>
-          ${r.hojaRuta ? `<div style="font-size:11px; color:var(--accent); font-weight:600;">📋 Hoja de ruta adjunta</div>` : `<div style="font-size:11px; color:var(--text3);">Sin hoja de ruta</div>`}
-        </div>
-      `;
-    }).join('');
-  }
-  showScreen('screen-historial');
-}
-
-// ── FINALIZAR RUTA ────────────────────────────────────────────────────
-let hojaRutaData = null;
-
-function openFinalizar() {
-  hojaRutaData = null;
-  // Reset upload zone
-  const icon = document.getElementById('hoja-icon');
-  const label = document.getElementById('hoja-label');
-  const zone = document.getElementById('hoja-upload-zone');
-  if (icon) icon.textContent = '📄';
-  if (label) label.textContent = 'Toca para subir';
-  if (zone) zone.style.borderColor = 'var(--border)';
-
-  const done = stops.filter(s => s.status === 'done').length;
-  const inc  = stops.filter(s => s.status === 'incident').length;
-  const pend = stops.filter(s => s.status === 'pending').length;
-  const allConfirmed = pend === 0;
-
-  // Aviso pendientes
-  const aviso = document.getElementById('finalizar-pendientes-aviso');
-  if (aviso) aviso.style.display = allConfirmed ? 'none' : 'block';
-
-  // KPIs
-  const kpis = document.getElementById('finalizar-kpis');
-  if (kpis) kpis.innerHTML = `
-    <div class="kpi-box green"><div class="num">${done}</div><div class="lbl">Entregadas</div></div>
-    <div class="kpi-box amber"><div class="num">${inc}</div><div class="lbl">Incidencias</div></div>
-    <div class="kpi-box blue"><div class="num">${stops.length}</div><div class="lbl">Total</div></div>
-    <div class="kpi-box gray"><div class="num">${pend}</div><div class="lbl">Pendientes</div></div>
-  `;
-
-  // Texto resumen
-  const txt = document.getElementById('finalizar-resumen-txt');
-  if (txt) {
-    const fecha = new Date().toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
-    txt.textContent = `${fecha} · Sube la hoja de ruta firmada para cerrar el día`;
-  }
-
-  updateFinalizarBtn();
-  showScreen('screen-finalizar');
-}
-
-function hojaUploaded(input) {
-  if (!input.files.length) return;
-  const file = input.files[0];
-  const reader = new FileReader();
-  reader.onload = e => {
-    hojaRutaData = { name: file.name, data: e.target.result };
-    const icon = document.getElementById('hoja-icon');
-    const label = document.getElementById('hoja-label');
-    const zone = document.getElementById('hoja-upload-zone');
-    if (icon) icon.textContent = '✅';
-    if (label) label.textContent = file.name;
-    if (zone) zone.style.borderColor = 'var(--green)';
-    updateFinalizarBtn();
-    toast('Hoja de ruta cargada ✓', 'ok');
-  };
-  reader.readAsDataURL(file);
-}
-
-function updateFinalizarBtn() {
-  const pend = stops.filter(s => s.status === 'pending').length;
-  const allConfirmed = pend === 0;
-  const btn = document.getElementById('btn-cerrar-ruta');
-  if (!btn) return;
-  const canClose = allConfirmed && hojaRutaData !== null;
-  btn.disabled = !canClose;
-  btn.style.opacity = canClose ? '1' : '.4';
-  btn.style.cursor  = canClose ? 'pointer' : 'not-allowed';
-}
-
-function checkAndFinalizar() {
-  const pend = stops.filter(s => s.status === 'pending').length;
-  if (pend > 0) {
-    toast(`Quedan ${pend} parada${pend > 1 ? 's' : ''} sin confirmar`, 'warn');
-    // Still allow going to finalizar screen to see the state
-  }
-  openFinalizar();
-}
-
-function cerrarRuta() {
-  const pend = stops.filter(s => s.status === 'pending').length;
-  if (pend > 0) { toast('Quedan paradas pendientes', 'warn'); return; }
-  if (!hojaRutaData) { toast('Sube la hoja de ruta primero', 'warn'); return; }
-
-  const hist = getHistorial();
-  const fecha = new Date().toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
-  hist.push({
-    fecha,
-    timestamp: Date.now(),
-    nombre: routeName || fecha,
-    stops: stops.map(s => ({ company: s.company, cp: s.cp, city: s.city, status: s.status, incidentType: s.incidentType })),
-    hojaRuta: hojaRutaData.name
-  });
-  saveHistorial(hist);
-
-  // Limpiar ruta actual
-  stops = [];
-  hojaRutaData = null;
-  routeName = '';
-  localStorage.removeItem('rutaapp_stops');
-  localStorage.removeItem('rutaapp_routename');
-
-  toast('¡Ruta cerrada y guardada! ✓', 'ok');
-  setTimeout(() => {
-    updateMenu();
-    showScreen('screen-menu');
-  }, 800);
-}
-
-// ── SAVE NOTE ────────────────────────────────────────────────────────
-function saveNote(val) {
-  if (currentStopIdx === null) return;
-  stops[currentStopIdx].note = val;
-  saveState();
-}
-
-// ── SIGNATURE ────────────────────────────────────────────────────────
-let sigCanvas, sigCtx, sigDrawing = false, sigLastX, sigLastY;
-
-function initSig() {
-  sigCanvas = document.getElementById('sig-canvas');
-  if (!sigCanvas) return;
-  sigCtx = sigCanvas.getContext('2d');
-  sigCanvas.width = sigCanvas.offsetWidth;
-
-  // Load existing signature
-  const s = stops[currentStopIdx];
-  if (s && s.signature) {
-    const img = new Image();
-    img.onload = () => sigCtx.drawImage(img, 0, 0);
-    img.src = s.signature;
-  }
-
-  // Touch events
-  sigCanvas.addEventListener('touchstart', e => {
-    e.preventDefault();
-    sigDrawing = true;
-    const r = sigCanvas.getBoundingClientRect();
-    sigLastX = e.touches[0].clientX - r.left;
-    sigLastY = e.touches[0].clientY - r.top;
-  }, { passive: false });
-
-  sigCanvas.addEventListener('touchmove', e => {
-    e.preventDefault();
-    if (!sigDrawing) return;
-    const r = sigCanvas.getBoundingClientRect();
-    const x = e.touches[0].clientX - r.left;
-    const y = e.touches[0].clientY - r.top;
-    sigCtx.beginPath();
-    sigCtx.moveTo(sigLastX, sigLastY);
-    sigCtx.lineTo(x, y);
-    sigCtx.strokeStyle = '#E6EDF3';
-    sigCtx.lineWidth = 2.5;
-    sigCtx.lineCap = 'round';
-    sigCtx.stroke();
-    sigLastX = x; sigLastY = y;
-    saveSig();
-  }, { passive: false });
-
-  sigCanvas.addEventListener('touchend', () => { sigDrawing = false; });
-
-  // Mouse events (desktop/PWA)
-  sigCanvas.addEventListener('mousedown', e => {
-    sigDrawing = true;
-    const r = sigCanvas.getBoundingClientRect();
-    sigLastX = e.clientX - r.left;
-    sigLastY = e.clientY - r.top;
-  });
-  sigCanvas.addEventListener('mousemove', e => {
-    if (!sigDrawing) return;
-    const r = sigCanvas.getBoundingClientRect();
-    const x = e.clientX - r.left;
-    const y = e.clientY - r.top;
-    sigCtx.beginPath();
-    sigCtx.moveTo(sigLastX, sigLastY);
-    sigCtx.lineTo(x, y);
-    sigCtx.strokeStyle = '#E6EDF3';
-    sigCtx.lineWidth = 2.5;
-    sigCtx.lineCap = 'round';
-    sigCtx.stroke();
-    sigLastX = x; sigLastY = y;
-    saveSig();
-  });
-  sigCanvas.addEventListener('mouseup', () => { sigDrawing = false; });
-}
-
-function saveSig() {
-  if (!sigCanvas || currentStopIdx === null) return;
-  stops[currentStopIdx].signature = sigCanvas.toDataURL();
-  saveState();
-}
-
-function clearSig() {
-  if (!sigCanvas) return;
-  sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
-  if (currentStopIdx !== null) {
-    stops[currentStopIdx].signature = null;
-    saveState();
-  }
-}
-
-// ── DRAG & DROP REORDER ───────────────────────────────────────────────
-let dragIdx = null;
-
-function dragStart(e, idx) {
-  dragIdx = idx;
-  e.dataTransfer.effectAllowed = 'move';
-  document.getElementById(`stop-card-${idx}`)?.classList.add('dragging');
-}
-
-function dragOver(e, idx) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-  document.querySelectorAll('.stop-card').forEach(c => c.classList.remove('drag-over'));
-  document.getElementById(`stop-card-${idx}`)?.classList.add('drag-over');
-}
-
-function dragDrop(e, idx) {
-  e.preventDefault();
-  if (dragIdx === null || dragIdx === idx) return;
-  const moved = stops.splice(dragIdx, 1)[0];
-  stops.splice(idx, 0, moved);
-  saveState();
-  renderList();
-  toast('Parada reordenada ✓', 'ok');
-}
-
-function dragEnd(e) {
-  document.querySelectorAll('.stop-card').forEach(c => {
-    c.classList.remove('dragging');
-    c.classList.remove('drag-over');
-  });
-  dragIdx = null;
-}
-
-// ── HISTORIAL DETAIL ──────────────────────────────────────────────────
-function openHistorialDetail(idx) {
-  const hist = getHistorial();
-  const r = hist[hist.length - 1 - idx]; // reversed order
-  if (!r) return;
-
-  document.getElementById('hd-title').textContent = r.nombre || r.fecha;
-
-  const done = r.stops.filter(s => s.status === 'done').length;
-  const inc  = r.stops.filter(s => s.status === 'incident').length;
-  const pend = r.stops.filter(s => s.status === 'pending').length;
-
-  document.getElementById('hd-content').innerHTML = `
-    <div style="padding:16px;">
-      <div style="font-size:12px; color:var(--text2); margin-bottom:12px;">📅 ${r.fecha}</div>
-      <div class="resumen-kpi" style="margin-bottom:16px;">
-        <div class="kpi-box green"><div class="num">${done}</div><div class="lbl">Entregadas</div></div>
-        <div class="kpi-box amber"><div class="num">${inc}</div><div class="lbl">Incidencias</div></div>
-        <div class="kpi-box blue"><div class="num">${r.stops.length}</div><div class="lbl">Total</div></div>
-        <div class="kpi-box gray"><div class="num">${pend}</div><div class="lbl">Pendientes</div></div>
-      </div>
-      ${r.hojaRuta ? `<div style="background:var(--surface); border:1px solid var(--green); border-radius:10px; padding:10px 14px; font-size:13px; color:var(--green); margin-bottom:16px;">📋 ${r.hojaRuta}</div>` : ''}
-      <div class="section-label" style="margin-bottom:10px;">Detalle paradas</div>
-      ${r.stops.map((s, i) => {
-        const icon = s.status === 'done' ? '✅' : s.status === 'incident' ? '⚠️' : '📦';
-        const stClass = s.status === 'done' ? 'st-ok' : s.status === 'incident' ? 'st-inc' : 'st-pend';
-        const stText  = s.status === 'done' ? 'Entregado' : s.status === 'incident' ? (s.incidentType || 'Incidencia') : 'Pendiente';
-        return `
-          <div class="resumen-list-item">
-            <div style="width:22px;height:22px;border-radius:6px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--text3);flex-shrink:0;">${i+1}</div>
-            <div class="ico">${icon}</div>
-            <div style="flex:1;min-width:0;">
-              <div class="name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${s.company}</div>
-              <div style="font-size:10px;color:var(--text3);">${s.cp} — ${s.city}</div>
-            </div>
-            <div class="st ${stClass}" style="flex-shrink:0;">${stText}</div>
-          </div>`;
-      }).join('')}
-    </div>
-  `;
-  showScreen('screen-historial-detail');
-}
-
-// ── DRAG & DROP (PDF upload zone) ────────────────────────────────────
-const zone = document.getElementById('upload-zone');
-zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
-zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
-zone.addEventListener('drop', e => {
-  e.preventDefault(); zone.classList.remove('drag');
-  const file = e.dataTransfer.files[0];
-  if (file && file.type === 'application/pdf') {
-    const fakeInput = { files: [file] };
-    loadPDF(fakeInput);
-  }
-});
-
-// ── INIT ─────────────────────────────────────────────────────────────
-loadState();
-
-// ── SERVICE WORKER (PWA offline) ─────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  const swCode = `
-    const CACHE = 'rutaapp-v1';
-    const ASSETS = [
-      'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
-      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
-    ];
-    self.addEventListener('install', e => {
-      e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS).catch(()=>{})));
-      self.skipWaiting();
-    });
-    self.addEventListener('activate', e => {
-      e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
-      self.clients.claim();
-    });
-    self.addEventListener('fetch', e => {
-      e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
-    });
-  `;
-  const blob = new Blob([swCode], { type: 'application/javascript' });
-  navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(()=>{});
-}
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
 </script>
 </body>
 </html>
